@@ -3,6 +3,6 @@ name = "tellonym-clone-backend"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
+sea-orm =  { version = "^0", features = [ "sqlx-mysql", "runtime-tokio-rustls", "macros" ] }
+rocket = "0.5.0-rc.2"
