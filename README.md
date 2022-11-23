@@ -1,4 +1,6 @@
 # tellonym-clone-backend
 Api for https://github.com/dariuszzz/tellonym-clone
 
-min rust 1.65 nightly
+## Requirements:
+- min rust 1.65 nightly
+- mysql database named `tellonym_clone` on localhost
