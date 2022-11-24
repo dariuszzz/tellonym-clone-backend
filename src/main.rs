@@ -1,44 +1,113 @@
 mod pool;
-use bcrypt::{bcrypt, hash, verify};
-use jwt_util::JWTUtil;
 use pool::Db;
 
 mod user_guard;
-mod jwt_util;
+use user_guard::UserGuard;
 
-use migration::{MigratorTrait};
+mod jwt_util;
+use jwt_util::JWTUtil;
+
+use migration::{MigratorTrait, JoinType};
 use rocket::{fairing::{AdHoc, self}, Rocket, Build, serde::json::Json};
 use serde::{Deserialize};
 use sea_orm_rocket::{Database, Connection};
-use sea_orm::ActiveModelTrait;
+use sea_orm::{ActiveModelTrait, FromQueryResult};
 use sea_orm::EntityTrait;
 use sea_orm::ActiveValue::Set;
 use sea_orm::ColumnTrait;
 use sea_orm::QueryFilter;
+use sea_orm::RelationTrait;
+use sea_orm::QuerySelect;
+use sea_orm::QueryTrait;
 
 use entity::user::{self, Entity as User};
 use entity::question::{self, Entity as Question};
-use user_guard::UserGuard;
+use entity::answer::{self, Entity as Answer};
+
+use bcrypt::{bcrypt, hash, verify};
 
 #[macro_use] extern crate rocket;
 #[macro_use] extern crate dotenv_codegen;
 
-#[get("/user/<id>")]
-async fn user_page(conn: Connection<'_, Db>, id: i32) -> Result<Json<(user::Model, Vec<question::Model>)>, String> {
+#[get("/questions/<id>")]
+async fn user_questions(conn: Connection<'_, Db>, id: i32) -> Result<Json<Vec<serde_json::Value>>, String> {
     let db = conn.into_inner();
 
-    let users_vec: Vec<(user::Model, Vec<question::Model>)> = User::find_by_id(id)
-        .find_with_related(Question)
-        .all(db)
-        .await
-        .map_err(|_| String::from("database error"))?;
+    let questions_and_answers: Vec<(question::Model, Vec<answer::Model>)> = Question::find()
+    .filter(question::Column::AskedId.eq(id))
+    .find_with_related(Answer)
+    .all(db)
+    .await
+    .map_err(|_| String::from("Database error"))?;
 
-    let user = users_vec
-        .first()
-        .ok_or(String::from("User not found"))?
-        .to_owned();
+    let questions = questions_and_answers.into_iter().map(
+        |(question, answers)| serde_json::json!(
+            {
+                "question": question,
+                "answer": answers.first(),
+            }
+        )
+    ).collect::<Vec<_>>();
+
+    Ok(Json(questions))
+}
+
+#[get("/user/<id>")]
+async fn user_page(conn: Connection<'_, Db>, id: i32) -> Result<Json<user::Model>, String> {
+    let db = conn.into_inner();
+
+    let user: user::Model = User::find_by_id(id)
+        .one(db)
+        .await
+        .map_err(|_| String::from("Database error"))?
+        .ok_or(String::from("User does not exist"))?;
 
     Ok(Json(user))
+}
+
+#[derive(Deserialize)]
+struct AnswerQuestionData<'a> {
+    question_id: i32,
+    content: &'a str
+}
+
+#[post("/answer", data = "<answer_data>")]
+async fn answer_question(conn: Connection<'_, Db>, user: UserGuard, answer_data: Json<AnswerQuestionData<'_>>) -> Result<(), String> {
+    let AnswerQuestionData { question_id, content } = answer_data.into_inner();
+    let db = conn.into_inner();
+    let username = user.into_inner();
+
+    let user: user::Model = User::find()
+        .filter(user::Column::Username.eq(username))    
+        .one(db)
+        .await
+        .map_err(|_| String::from("database error"))?
+        .ok_or(String::from("User does not exist"))?;
+
+    let question: question::Model = Question::find_by_id(question_id)
+        .one(db)
+        .await
+        .map_err(|_| String::from("database error"))?
+        .ok_or(String::from("User does not exist"))?;
+
+    if question.asked_id != user.id { return Err(String::from("You are not allowed to answer this question")) }
+    
+    let now = chrono::offset::Utc::now().naive_utc();
+
+    let answer = answer::ActiveModel {
+        question_id: Set(question_id),
+        content: Set(content.to_string()),
+        answered_at: Set(now),
+        last_edit_at: Set(now),
+        ..Default::default()
+    };
+
+    answer.save(db)
+        .await
+        .map_err(|_| String::from("Database error"))?;
+
+
+    Ok(())
 }
 
 #[derive(Deserialize)]
@@ -139,7 +208,14 @@ fn rocket() -> _ {
     rocket::build()
         .attach(Db::init())
         .attach(AdHoc::try_on_ignite("Migrations", run_migrations))
-        .mount("/", routes![register, login, user_page, ask_question])
+        .mount("/", routes![
+            register, 
+            login, 
+            user_page, 
+            ask_question, 
+            answer_question, 
+            user_questions
+        ])
 }
 
 async fn run_migrations(rocket: Rocket<Build>) -> fairing::Result {
