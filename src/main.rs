@@ -84,6 +84,7 @@ async fn answer_question(conn: Connection<'_, Db>, user: UserGuard, answer_data:
         .map_err(|_| String::from("database error"))?
         .ok_or(String::from("User does not exist"))?;
 
+    //This is here to check whether question (id: question_id) actually exists
     let question: question::Model = Question::find_by_id(question_id)
         .one(db)
         .await
@@ -117,16 +118,27 @@ struct AskQuestionData<'a> {
 }
 
 #[post("/ask", data = "<question_data>")]
-async fn ask_question(conn: Connection<'_, Db>, _user: UserGuard, question_data: Json<AskQuestionData<'_>>) -> Result<(), String> {
+async fn ask_question(conn: Connection<'_, Db>, user: UserGuard, question_data: Json<AskQuestionData<'_>>) -> Result<(), String> {
     let AskQuestionData { asked_id, content } = question_data.into_inner();
+    let username = user.into_inner();
     let db = conn.into_inner();
 
-    let _user: user::Model = User::find_by_id(asked_id)
+    let user_asking_question: user::Model = User::find()
+        .filter(user::Column::Username.eq(username))
         .one(db)
         .await
         .map_err(|_| String::from("database error"))?
-        .ok_or(String::from("User does not exist"))?;
+        .ok_or(String::from("User (Asking) does not exist"))?;
 
+
+    //this is here to check whether the user (id: asked_id) actually exists
+    let user_being_asked: user::Model = User::find_by_id(asked_id)
+        .one(db)
+        .await
+        .map_err(|_| String::from("database error"))?
+        .ok_or(String::from("User (Being asked) does not exist"))?;
+
+    if user_being_asked.id == user_asking_question.id { return Err(String::from("You cannot ask yourself a question")) }
 
     let question = question::ActiveModel {
         content: Set(content.to_string()),
