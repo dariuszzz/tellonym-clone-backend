@@ -7,18 +7,25 @@ use std::collections::BTreeMap;
 pub struct JWTUtil;
 
 impl JWTUtil {
-    
-    pub fn sign_jwt(username: String) -> String {
-        let key: Hmac<Sha256> = Hmac::new_from_slice(dotenv!("ACCESS_SECRET").as_bytes()).unwrap();
-        
+
+    #[must_use]
+    pub fn access_token_claims(username: &str) -> BTreeMap<&'static str, String> { 
         let mut claims = BTreeMap::new();
-        claims.insert("sub", username);
+        claims.insert("sub", username.to_string());
         claims.insert("iad", chrono::offset::Utc::now().to_rfc3339());
-        
-        return claims.sign_with_key(&key).unwrap();
+
+        claims
     }
     
-
+    
+    #[must_use]
+    pub fn sign_jwt(username: &str, claims: BTreeMap<&str, String>) -> String {
+        let key: Hmac<Sha256> = Hmac::new_from_slice(dotenv!("ACCESS_SECRET").as_bytes()).unwrap();
+        
+        claims.sign_with_key(&key).unwrap()
+    }
+    
+    #[must_use]
     pub fn verify_jwt(jwt: &str) -> Option<String> {
         let key: Hmac<Sha256> = Hmac::new_from_slice(dotenv!("ACCESS_SECRET").as_bytes()).unwrap();
         

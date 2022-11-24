@@ -23,17 +23,20 @@ use user_guard::UserGuard;
 #[macro_use] extern crate rocket;
 #[macro_use] extern crate dotenv_codegen;
 
-
-
 #[get("/user/<id>")]
-async fn user_page(conn: Connection<'_, Db>, id: i32) -> Result<Json<Vec<(user::Model, Vec<question::Model>)>>, String> {
+async fn user_page(conn: Connection<'_, Db>, id: i32) -> Result<Json<(user::Model, Vec<question::Model>)>, String> {
     let db = conn.into_inner();
 
-    let user: Vec<(user::Model, Vec<question::Model>)> = User::find_by_id(id)
+    let users_vec: Vec<(user::Model, Vec<question::Model>)> = User::find_by_id(id)
         .find_with_related(Question)
         .all(db)
         .await
         .map_err(|_| String::from("database error"))?;
+
+    let user = users_vec
+        .first()
+        .ok_or(String::from("User not found"))?
+        .to_owned();
 
     Ok(Json(user))
 }
@@ -49,12 +52,12 @@ async fn ask_question(conn: Connection<'_, Db>, _user: UserGuard, question_data:
     let AskQuestionData { asked_id, content } = question_data.into_inner();
     let db = conn.into_inner();
 
-    let user: Option<user::Model> = User::find_by_id(asked_id)
+    let _user: user::Model = User::find_by_id(asked_id)
         .one(db)
         .await
-        .map_err(|_| String::from("database error"))?;
+        .map_err(|_| String::from("database error"))?
+        .ok_or(String::from("User does not exist"))?;
 
-    let user = user.ok_or(String::from("User does not exist"))?;
 
     let question = question::ActiveModel {
         content: Set(content.to_string()),
@@ -97,7 +100,8 @@ async fn register(conn: Connection<'_, Db>, register_data: Json<LoginData<'_>>) 
         .await
         .map_err(|_| String::from("Database error"))?;
     
-    let jwt = JWTUtil::sign_jwt(username.to_string());
+    let claims = JWTUtil::access_token_claims(&username);
+    let jwt = JWTUtil::sign_jwt(&username, claims);
 
     Ok(jwt)
 }
@@ -124,7 +128,8 @@ async fn login(conn: Connection<'_, Db>, login_data: Json<LoginData<'_>>) -> Res
         return Err(String::from("Invalid token"))
     }
 
-    let jwt = JWTUtil::sign_jwt(username.to_string());
+    let claims = JWTUtil::access_token_claims(&username);
+    let jwt = JWTUtil::sign_jwt(&username, claims);
 
     Ok(jwt)
 }
