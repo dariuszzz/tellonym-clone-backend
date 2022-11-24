@@ -9,4 +9,5 @@ name = "entity"
 path = "src/lib.rs"
 
 [dependencies]
+chrono = "0.4.23"
 sea-orm = { version = "^0" }

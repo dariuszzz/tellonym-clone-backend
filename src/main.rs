@@ -1,46 +1,52 @@
 mod pool;
 use pool::Db;
 
+mod query;
+
 use migration::{MigratorTrait, DbErr};
-use rocket::{fairing::{AdHoc, self}, Rocket, Build, response::content::RawJson};
+use rocket::{fairing::{AdHoc, self}, Rocket, Build, serde::json::Json};
+use serde::{Deserialize};
 use sea_orm_rocket::{Database, Connection};
 use sea_orm::ActiveModelTrait;
 use sea_orm::EntityTrait;
 use sea_orm::ActiveValue::Set;
 
-use entity::test_num::{Entity as TestNum, self};
+use entity::user::{self, Entity as User};
 
 #[macro_use] extern crate rocket;
 
-#[get("/")]
-async fn index(conn: Connection<'_, Db>) -> Result<String, String> {
+#[get("/user/<id>")]
+async fn user_page(conn: Connection<'_, Db>, id: i32) -> Result<Json<Option<serde_json::Value>>, String> {
     let db = conn.into_inner();
-    let nums: Vec<test_num::Model> = TestNum::find()
-        .all(db)
-        .await
-        .map_err(|_| String::from("Error"))?;
-    
-    let concated = nums
-        .into_iter()
-        .map(|model| model.num.to_string())
-        .reduce(|acc, num| acc + " " + num.as_ref())
-        .unwrap();
 
-    Ok(concated)
+    let user: Option<serde_json::Value> = User::find_by_id(id)
+        .into_json()
+        .one(db)
+        .await
+        .map_err(|_| String::from("database error"))?;
+
+    Ok(Json(user))
 }
 
-#[get("/add/<num>")]
-async fn add(conn: Connection<'_, Db>, num: i32) -> Result<(), String> {
+#[derive(Deserialize)]
+struct RegisterData<'a> {
+    username: &'a str,
+    password: &'a str,
+}
+
+#[post("/register", data = "<register_data>")]
+async fn register(conn: Connection<'_, Db>, register_data: Json<RegisterData<'_>>) -> Result<(), String> {
+    let RegisterData { username, password } = register_data.into_inner();
     let db = conn.into_inner();
-
-    test_num::ActiveModel {
-        num: Set(num),
+    
+    let user = user::ActiveModel {
+        username: Set(username.to_string()),
+        password: Set(password.to_string()),
         ..Default::default()
-    }
-    .save(db)
-    .await
-    .map_err(|_| String::from("Error"))?;
+    };
 
+    user.save(db).await.map_err(|_| String::from("db error"))?;
+    
     Ok(())
 }
 
@@ -49,7 +55,7 @@ fn rocket() -> _ {
     rocket::build()
         .attach(Db::init())
         .attach(AdHoc::try_on_ignite("Migrations", run_migrations))
-        .mount("/", routes![add, index])
+        .mount("/", routes![register, user_page])
 }
 
 async fn run_migrations(rocket: Rocket<Build>) -> fairing::Result {
