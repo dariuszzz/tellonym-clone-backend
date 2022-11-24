@@ -16,3 +16,9 @@ async-trait = { version = "0.1" }
 serde = { version = "1.0", features = [ "derive" ] }
 chrono = "0.4.23"
 serde_json = "1.0.89"
+bcrypt = "0.13.0"
+dotenv = "0.15.0"
+dotenv_codegen = "0.15.0"
+jwt = "0.16.0"
+hmac = "0.12.1"
+sha2 = "0.10.6"
