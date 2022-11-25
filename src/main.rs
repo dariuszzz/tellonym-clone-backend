@@ -1,4 +1,5 @@
 mod pool;
+use cors::CORS;
 use pool::Db;
 
 mod user_guard;
@@ -7,8 +8,10 @@ use user_guard::UserGuard;
 mod jwt_util;
 use jwt_util::JWTUtil;
 
+mod cors;
+
 use migration::{MigratorTrait, JoinType};
-use rocket::{fairing::{AdHoc, self}, Rocket, Build, serde::json::Json, http::{CookieJar, Cookie}};
+use rocket::{fairing::{AdHoc, self}, Rocket, Build, serde::json::Json, http::{CookieJar, Cookie, Method}};
 use serde::{Deserialize};
 use sea_orm_rocket::{Database, Connection};
 use sea_orm::{ActiveModelTrait, FromQueryResult};
@@ -102,6 +105,21 @@ async fn user_page(conn: Connection<'_, Db>, id: i32) -> Result<Json<user::Model
         .await
         .map_err(|_| String::from("Database error"))?
         .ok_or(String::from("User does not exist"))?;
+
+    Ok(Json(user))
+}
+
+#[get("/user")]
+async fn current_user(conn: Connection<'_, Db>, user: UserGuard) -> Result<Json<user::Model>, String> {
+    let db = conn.into_inner();
+    let username = user.into_inner();
+
+    let user: user::Model = User::find()
+        .filter(user::Column::Username.eq(username))
+        .one(db)
+        .await
+        .map_err(|_| String::from("Database error"))?
+        .ok_or(String::from("User is not logged int"))?;
 
     Ok(Json(user))
 }
@@ -275,6 +293,7 @@ async fn login(
 #[launch]
 fn rocket() -> _ {
     rocket::build()
+        .attach(CORS)
         .attach(Db::init())
         .attach(AdHoc::try_on_ignite("Migrations", run_migrations))
         .mount("/", routes![
@@ -285,7 +304,8 @@ fn rocket() -> _ {
             ask_question, 
             answer_question, 
             refresh,
-            users
+            users,
+            current_user
         ])
 }
 
