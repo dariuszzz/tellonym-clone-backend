@@ -8,7 +8,7 @@ mod jwt_util;
 use jwt_util::JWTUtil;
 
 use migration::{MigratorTrait, JoinType};
-use rocket::{fairing::{AdHoc, self}, Rocket, Build, serde::json::Json};
+use rocket::{fairing::{AdHoc, self}, Rocket, Build, serde::json::Json, http::{CookieJar, Cookie}};
 use serde::{Deserialize};
 use sea_orm_rocket::{Database, Connection};
 use sea_orm::{ActiveModelTrait, FromQueryResult};
@@ -29,7 +29,22 @@ use bcrypt::{bcrypt, hash, verify};
 #[macro_use] extern crate rocket;
 #[macro_use] extern crate dotenv_codegen;
 
-#[get("/questions/<id>")]
+#[get("/refresh")]
+async fn refresh(cookies: &CookieJar<'_>) -> Result<String, String> {
+
+    let refresh_token_cookie = cookies.get("refresh_token").ok_or(String::from("No refresh cookie"))?;
+    let refresh_token = refresh_token_cookie.value();
+ 
+    let username = JWTUtil::verify_refresh_jwt(refresh_token);
+
+    if let None = username { return Err(String::from("Invalid refresh token")) }
+
+    let access_jwt = JWTUtil::sign_access_jwt(&username.unwrap());
+
+    Ok(access_jwt)
+}
+
+#[get("/user/<id>/questions")]
 async fn user_questions(conn: Connection<'_, Db>, id: i32) -> Result<Json<Vec<serde_json::Value>>, String> {
     let db = conn.into_inner();
 
@@ -72,7 +87,11 @@ struct AnswerQuestionData<'a> {
 }
 
 #[post("/answer", data = "<answer_data>")]
-async fn answer_question(conn: Connection<'_, Db>, user: UserGuard, answer_data: Json<AnswerQuestionData<'_>>) -> Result<(), String> {
+async fn answer_question(
+    conn: Connection<'_, Db>, 
+    user: UserGuard, 
+    answer_data: Json<AnswerQuestionData<'_>>
+) -> Result<(), String> {
     let AnswerQuestionData { question_id, content } = answer_data.into_inner();
     let db = conn.into_inner();
     let username = user.into_inner();
@@ -164,7 +183,11 @@ struct LoginData<'a> {
 }
 
 #[post("/register", data = "<register_data>")]
-async fn register(conn: Connection<'_, Db>, register_data: Json<LoginData<'_>>) -> Result<String, String> {
+async fn register(
+    cookies: &CookieJar<'_>,
+    conn: Connection<'_, Db>, 
+    register_data: Json<LoginData<'_>>
+) -> Result<String, String> {
     let LoginData { username, password } = register_data.into_inner();
     let db = conn.into_inner();
     
@@ -180,15 +203,21 @@ async fn register(conn: Connection<'_, Db>, register_data: Json<LoginData<'_>>) 
     user.insert(db)
         .await
         .map_err(|_| String::from("Database error"))?;
-    
-    let claims = JWTUtil::access_token_claims(&username);
-    let jwt = JWTUtil::sign_jwt(&username, claims);
 
-    Ok(jwt)
+    let access_jwt = JWTUtil::sign_access_jwt(&username);
+    let refresh_jwt = JWTUtil::sign_refresh_jwt(&username);
+
+    cookies.add(Cookie::build("refresh_token", refresh_jwt).http_only(true).finish());
+
+    Ok(access_jwt)
 }
 
 #[post("/login", data = "<login_data>")]
-async fn login(conn: Connection<'_, Db>, login_data: Json<LoginData<'_>>) -> Result<String, String> {
+async fn login(
+    cookies: &CookieJar<'_>,
+    conn: Connection<'_, Db>, 
+    login_data: Json<LoginData<'_>>
+) -> Result<String, String> {
     let LoginData { username, password } = login_data.into_inner();
     let db = conn.into_inner();
 
@@ -209,10 +238,12 @@ async fn login(conn: Connection<'_, Db>, login_data: Json<LoginData<'_>>) -> Res
         return Err(String::from("Invalid token"))
     }
 
-    let claims = JWTUtil::access_token_claims(&username);
-    let jwt = JWTUtil::sign_jwt(&username, claims);
+    let access_jwt = JWTUtil::sign_access_jwt(&username);
+    let refresh_jwt = JWTUtil::sign_refresh_jwt(&username);
 
-    Ok(jwt)
+    cookies.add(Cookie::build("refresh_token", refresh_jwt).http_only(true).finish());
+
+    Ok(access_jwt)
 }
 
 #[launch]
@@ -224,9 +255,10 @@ fn rocket() -> _ {
             register, 
             login, 
             user_page, 
+            user_questions,
             ask_question, 
             answer_question, 
-            user_questions
+            refresh
         ])
 }
 

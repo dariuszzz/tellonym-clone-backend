@@ -10,24 +10,24 @@ Api for https://github.com/dariuszzz/tellonym-clone
 (dates are iso8601)
 
 
-- `/register` <br>
+- POST `/register` <br>
   => `json { username: string, password: string }` <br>
   <= access token (plaintext), [ todo: refresh token in cookie ]
 
-- `/login` <br>
+- POST `/login` <br>
   => `json { username: string, password: string }` <br>
   <= access token (plaintext), [ todo: refresh token in cookie ]
 
-- `/user/<id: int>` <br>
+- GET `/user/<id: int>` <br>
   <= `json { id: int, username: string }`
 
-- `/ask` <br>
+- POST `/ask` <br>
   => `json { asked_id: int, content: string }`
   
-- `/answer` <br>
+- POST `/answer` <br>
   => `json { question_id: int, content, string }`
 
-- `/questions/<id: int>` <br>
+- GET `/user/<id: int>/questions` <br>
   <=
 
         json [

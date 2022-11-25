@@ -28,7 +28,7 @@ impl<'r> FromRequest<'r> for UserGuard {
 
         if let Err(e) = jwt_token { return request::Outcome::Failure((Status::BadRequest, e)) }
 
-        let username = JWTUtil::verify_jwt(jwt_token.unwrap());
+        let username = JWTUtil::verify_access_jwt(jwt_token.unwrap());
 
         if let None = username { return request::Outcome::Failure((Status::BadRequest, String::from("Invalid token"))) }
 
