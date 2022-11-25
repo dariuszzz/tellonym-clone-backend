@@ -4,7 +4,7 @@ Api for https://github.com/dariuszzz/tellonym-clone
 ## Requirements:
 - min rust 1.65 nightly
 - mysql database named `tellonym_clone` on localhost
-- .env with DATABASE_URL and ACCESS_SECRET
+- .env with DATABASE_URL, REFRESH_SECRET and ACCESS_SECRET
 
 # Routes
 (dates are iso8601)
@@ -23,9 +23,11 @@ Api for https://github.com/dariuszzz/tellonym-clone
 
 - POST `/ask` <br>
   => `json { asked_id: int, content: string }`
+  Authorization header with access token
   
 - POST `/answer` <br>
   => `json { question_id: int, content, string }`
+  Authorization header with access token
 
 - GET `/users/<id: int>/questions` <br>
   <=
@@ -55,3 +57,8 @@ Api for https://github.com/dariuszzz/tellonym-clone
 - GET `/users [?search=<string>]` <br>
   <= `json [ user, user2, ...]`
   search= is for filtering by name
+
+- GET `/user` <br>
+  <= `json { id: int, username: string }`
+  Logged in user
+  Authorization header with access token

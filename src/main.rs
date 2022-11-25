@@ -10,24 +10,21 @@ use jwt_util::JWTUtil;
 
 mod cors;
 
-use migration::{MigratorTrait, JoinType};
-use rocket::{fairing::{AdHoc, self}, Rocket, Build, serde::json::Json, http::{CookieJar, Cookie, Method}};
+use migration::{MigratorTrait};
+use rocket::{fairing::{AdHoc, self}, Rocket, Build, serde::json::Json, http::{CookieJar, Cookie}};
 use serde::{Deserialize};
 use sea_orm_rocket::{Database, Connection};
-use sea_orm::{ActiveModelTrait, FromQueryResult};
+use sea_orm::{ActiveModelTrait};
 use sea_orm::EntityTrait;
 use sea_orm::ActiveValue::Set;
 use sea_orm::ColumnTrait;
 use sea_orm::QueryFilter;
-use sea_orm::RelationTrait;
-use sea_orm::QuerySelect;
-use sea_orm::QueryTrait;
 
 use entity::user::{self, Entity as User};
 use entity::question::{self, Entity as Question};
 use entity::answer::{self, Entity as Answer};
 
-use bcrypt::{bcrypt, hash, verify};
+use bcrypt::{hash, verify};
 
 #[macro_use] extern crate rocket;
 #[macro_use] extern crate dotenv_codegen;
