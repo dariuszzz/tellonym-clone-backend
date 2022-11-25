@@ -12,13 +12,13 @@ Api for https://github.com/dariuszzz/tellonym-clone
 
 - POST `/register` <br>
   => `json { username: string, password: string }` <br>
-  <= access token (plaintext), [ todo: refresh token in cookie ]
+  <= access token (plaintext), refresh token in cookie
 
 - POST `/login` <br>
   => `json { username: string, password: string }` <br>
-  <= access token (plaintext), [ todo: refresh token in cookie ]
+  <= access token (plaintext), refresh token in cookie
 
-- GET `/user/<id: int>` <br>
+- GET `/users/<id: int>` <br>
   <= `json { id: int, username: string }`
 
 - POST `/ask` <br>
@@ -27,7 +27,7 @@ Api for https://github.com/dariuszzz/tellonym-clone
 - POST `/answer` <br>
   => `json { question_id: int, content, string }`
 
-- GET `/user/<id: int>/questions` <br>
+- GET `/users/<id: int>/questions` <br>
   <=
 
         json [
@@ -51,3 +51,7 @@ Api for https://github.com/dariuszzz/tellonym-clone
             ...
         ] 
     ``
+
+- GET `/users [?search=<string>]` <br>
+  <= `json [ user, user2, ...]`
+  search= is for filtering by name

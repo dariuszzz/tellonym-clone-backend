@@ -44,7 +44,7 @@ async fn refresh(cookies: &CookieJar<'_>) -> Result<String, String> {
     Ok(access_jwt)
 }
 
-#[get("/user/<id>/questions")]
+#[get("/users/<id>/questions")]
 async fn user_questions(conn: Connection<'_, Db>, id: i32) -> Result<Json<Vec<serde_json::Value>>, String> {
     let db = conn.into_inner();
 
@@ -67,7 +67,33 @@ async fn user_questions(conn: Connection<'_, Db>, id: i32) -> Result<Json<Vec<se
     Ok(Json(questions))
 }
 
-#[get("/user/<id>")]
+#[get("/users?<search>")]
+async fn users(conn: Connection<'_, Db>, search: Option<&'_ str>) -> Result<Json<Vec<user::Model>>, String> {
+    let db = conn.into_inner();
+
+    match search{
+        Some(search) => { 
+            let users: Vec<user::Model> = User::find()
+                .filter(user::Column::Username.like(&format!("{}%", search)))
+                .all(db)
+                .await
+                .map_err(|_| String::from("Database error"))?;
+
+            Ok(Json(users))
+        }
+        None => {
+            let users: Vec<user::Model> = User::find()
+                .all(db)
+                .await
+                .map_err(|_| String::from("Database error"))?;
+            
+            Ok(Json(users))
+        }
+    }
+
+}
+
+#[get("/users/<id>")]
 async fn user_page(conn: Connection<'_, Db>, id: i32) -> Result<Json<user::Model>, String> {
     let db = conn.into_inner();
 
@@ -133,7 +159,7 @@ async fn answer_question(
 #[derive(Deserialize)]
 struct AskQuestionData<'a> {
     asked_id: i32,
-    content: &'a str
+    content: &'a str,
 }
 
 #[post("/ask", data = "<question_data>")]
@@ -258,7 +284,8 @@ fn rocket() -> _ {
             user_questions,
             ask_question, 
             answer_question, 
-            refresh
+            refresh,
+            users
         ])
 }
 
