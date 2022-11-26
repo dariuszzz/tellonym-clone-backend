@@ -121,6 +121,8 @@ pub async fn follow_user(conn: Connection<'_, Db>, user: UserGuard, to_follow_id
     let wants_to_follow = query::user_by_username(db, &username).await?;
     let to_be_followed = query::user_by_id(db, to_follow_id).await?;
 
+    if wants_to_follow.id == to_be_followed.id { return Err(String::from("You can not follow yourself")) };
+
     let follow: Option<follow::Model> = query::follows_with_both_ids(db, wants_to_follow.id, to_follow_id).await?;
     
     match follow {
