@@ -12,7 +12,11 @@ impl Fairing for CORS {
     }
 
     async fn on_response<'r>(&self, request: &'r Request<'_>, response: &mut Response<'r>) {
-        response.set_header(Header::new("Access-Control-Allow-Origin", "http://localhost:5173"));
+
+        let headers = request.headers();
+        let origin = headers.get_one("Origin").unwrap_or("");
+
+        response.set_header(Header::new("Access-Control-Allow-Origin", origin));
         response.set_header(Header::new("Access-Control-Allow-Methods", "POST, GET, PATCH, OPTIONS"));
         response.set_header(Header::new("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization"));
         response.set_header(Header::new("Access-Control-Allow-Credentials", "true"));
