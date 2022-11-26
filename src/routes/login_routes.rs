@@ -1,3 +1,5 @@
+use rocket::http::SameSite;
+
 use super::*;
 
 #[post("/refresh")]
@@ -45,7 +47,13 @@ pub async fn register(
     let access_jwt = JWTUtil::sign_access_jwt(&username);
     let refresh_jwt = JWTUtil::sign_refresh_jwt(&username);
 
-    cookies.add(Cookie::build("refresh_token", refresh_jwt).http_only(true).finish());
+    cookies.add(
+        Cookie::build("refresh_token", refresh_jwt)
+        .same_site(SameSite::None)
+        .http_only(true)
+        .secure(true)
+        .finish()
+    );
 
     Ok(access_jwt)
 }
@@ -71,7 +79,13 @@ pub async fn login(
     let access_jwt = JWTUtil::sign_access_jwt(&username);
     let refresh_jwt = JWTUtil::sign_refresh_jwt(&username);
 
-    cookies.add(Cookie::build("refresh_token", refresh_jwt).http_only(true).finish());
+    cookies.add(
+        Cookie::build("refresh_token", refresh_jwt)
+        .http_only(true)
+        .same_site(SameSite::None)
+        .secure(true)
+        .finish()
+    );
 
     Ok(access_jwt)
 }

@@ -49,7 +49,7 @@ impl JWTUtil {
 
     #[must_use]
     pub fn verify_refresh_jwt(jwt: &str) -> Option<String> {
-        let key: Hmac<Sha256> = Hmac::new_from_slice(dotenv!("ACCESS_SECRET").as_bytes()).unwrap();
+        let key: Hmac<Sha256> = Hmac::new_from_slice(dotenv!("REFRESH_SECRET").as_bytes()).unwrap();
         
         let claims: BTreeMap<String, String> = jwt.verify_with_key(&key).unwrap_or_else(|_| None)?;
         
