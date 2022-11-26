@@ -19,7 +19,7 @@ pub async fn answer_question(
     let user: user::Model = query::user_by_username(db, &username).await?;
 
     //This is here to check whether question (id: question_id) actually exists
-    let (question, _): (question::Model, _) = query::question_w_answer_by_id(db, question_id).await?;
+    let QuestionDTO { question, .. } = query::question_w_answer_by_id(db, question_id).await?;
 
     //TODO: Add editing of questions
 
@@ -44,10 +44,10 @@ pub async fn answer_question(
 }
 
 #[get("/questions/<question_id>")]
-pub async fn get_question(conn: Connection<'_, Db>, question_id: i32) -> Result<Json<(question::Model, Option<answer::Model>)>, String> {
+pub async fn get_question(conn: Connection<'_, Db>, question_id: i32) -> Result<Json<QuestionDTO>, String> {
     let db = conn.into_inner();
 
-    let question_and_answer: (question::Model, Option<answer::Model>) = query::question_w_answer_by_id(db, question_id).await?;
+    let question_and_answer: QuestionDTO = query::question_w_answer_by_id(db, question_id).await?;
 
     Ok(Json(question_and_answer))
 }

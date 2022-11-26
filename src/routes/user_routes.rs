@@ -83,7 +83,7 @@ pub async fn ask_question(conn: Connection<'_, Db>, user: UserGuard, asked_id: i
 }
 
 #[get("/users/<user_id>/questions")]
-pub async fn user_questions(conn: Connection<'_, Db>, user_id: i32) -> Result<Json<Vec<(question::Model, Option<answer::Model>)>>, String> {
+pub async fn user_questions(conn: Connection<'_, Db>, user_id: i32) -> Result<Json<Vec<QuestionDTO>>, String> {
     let db = conn.into_inner();
 
     let questions_and_answers = query::questions_w_answers_by_asked_id(db, user_id).await?;

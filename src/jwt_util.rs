@@ -25,7 +25,7 @@ impl JWTUtil {
     pub fn verify_access_jwt(jwt: &str) -> Option<String> {
         let key: Hmac<Sha256> = Hmac::new_from_slice(dotenv!("ACCESS_SECRET").as_bytes()).unwrap();
         
-        let claims: BTreeMap<String, String> = jwt.verify_with_key(&key).unwrap();
+        let claims: BTreeMap<String, String> = jwt.verify_with_key(&key).unwrap_or_else(|_| None)?;
         
         let username = claims.get("sub")?.clone();
         let iad = chrono::DateTime::parse_from_rfc3339(claims.get("iad")?).ok()?;
@@ -51,7 +51,7 @@ impl JWTUtil {
     pub fn verify_refresh_jwt(jwt: &str) -> Option<String> {
         let key: Hmac<Sha256> = Hmac::new_from_slice(dotenv!("ACCESS_SECRET").as_bytes()).unwrap();
         
-        let claims: BTreeMap<String, String> = jwt.verify_with_key(&key).unwrap();
+        let claims: BTreeMap<String, String> = jwt.verify_with_key(&key).unwrap_or_else(|_| None)?;
         
         let username = claims.get("sub")?.clone();
         let iad = chrono::DateTime::parse_from_rfc3339(claims.get("iad")?).ok()?;

@@ -6,6 +6,7 @@ pub use query::*;
 
 pub use sea_orm_rocket::Connection;
 use sea_orm_rocket::{Pool, Database};
+use serde::{Deserialize, Serialize};
 pub use super::pool::Db;
 
 pub use entity::user::{self, Entity as User};
@@ -18,3 +19,9 @@ use sea_orm::ColumnTrait;
 use sea_orm::QueryFilter;
 
 type DbType<'a> = &'a <<Db as Database>::Pool as Pool>::Connection;
+
+#[derive(Serialize, Deserialize)]
+pub struct QuestionDTO {
+    pub question: question::Model,
+    pub answer: Option<answer::Model>
+}
