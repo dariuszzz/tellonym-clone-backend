@@ -50,6 +50,7 @@ pub async fn update_user(db: DbType<'_>, user: user::ActiveModel) -> Result<user
     Ok(user)
 }
 
+//TODO: refactor names
 pub async fn change_follow_counts(
     db: DbType<'_>,
     follower: user::Model,
@@ -60,9 +61,9 @@ pub async fn change_follow_counts(
     let mut follower: user::ActiveModel = follower.into();
     let mut following: user::ActiveModel = following.into();
 
-    let follower_following_count: i32 = following.following_count.take()
+    let follower_following_count: i32 = follower.following_count.take()
         .unwrap_or(0);
-    let following_follower_count: i32 = following.following_count.take()
+    let following_follower_count: i32 = following.follower_count.take()
         .unwrap_or(0);
 
     follower.following_count = ActiveValue::Set(follower_following_count + change);

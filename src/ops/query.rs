@@ -96,7 +96,7 @@ pub async fn follows_with_following_id(db: DbType<'_>, following_id: i32) -> Res
 #[must_use]
 pub async fn follows_with_follower_id(db: DbType<'_>, follower_id: i32) -> Result<Vec<follow::Model>, String> {
     let follows: Vec<follow::Model> = Follow::find()
-        .filter(follow::Column::FollowingId.eq(follower_id))
+        .filter(follow::Column::FollowerId.eq(follower_id))
         .all(db)
         .await
         .map_err(|e| format!("Database error when querying users followed by another user: {}", e))?;
