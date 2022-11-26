@@ -70,6 +70,7 @@ pub async fn ask_question(conn: Connection<'_, Db>, user: UserGuard, asked_id: i
     let question = question::ActiveModel {
         content: Set(content.to_string()),
         asked_id: Set(asked_id),
+        asker_id: Set(if anonymous { None } else { Some(user_asking_question.id) }),
         asked_at: Set(chrono::offset::Utc::now().naive_utc()),
         ..Default::default()
     };
