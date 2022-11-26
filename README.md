@@ -6,9 +6,55 @@ Api for https://github.com/dariuszzz/tellonym-clone
 - mysql database named `tellonym_clone` on localhost
 - .env with DATABASE_URL and ACCESS_SECRET
 
-# Routes
-(dates are iso8601)
+# Types 
 
+## user 
+```
+json {
+  id: int,
+  username: string,
+  follower_coount: int,
+  following_count: int, //amount of people followed by this user
+  bio: string,
+}
+```
+
+## question 
+```
+json {
+  question: { 
+    id: int,
+    content: string,
+    likes: int,
+    asked_id: int,
+    asked_at: iso8601 date string,
+    asker_id: int | null, //null if the question was anonymous 
+  },
+  answer: {
+    id: int,
+    question_id: int,
+    content: string,
+    likes: int,
+    answered_at: iso8601 date string,
+    last_edit_at: iso8601 date string, //the same as `answered_at` if it wasn't edited
+  } | null
+}
+```
+
+# Routes
+
+- GET `/users [?search=<string>]` <br>
+  <= `json [ user1: user, user2: user, ... ]` <br>
+  [ ?search=Foo will returns users with usernames starting with "Foo"]
+
+- GET `/users/<user_id>` <br>
+  <= `json user` <br>
+  returns the user with the specified id
+
+- GET `/me` <br>
+  <= `json user` <br>
+  requires access token <br>
+  returns the user logged in with the access token
 
 - POST `/register` <br>
   => `json { username: string, password: string }` <br>
@@ -18,40 +64,25 @@ Api for https://github.com/dariuszzz/tellonym-clone
   => `json { username: string, password: string }` <br>
   <= access token (plaintext), refresh token in cookie
 
-- GET `/users/<id: int>` <br>
-  <= `json { id: int, username: string }`
+- POST `/refres` <br>
+  <= access token (plaintext) <br>
+  requires refresh token in cookies
 
-- POST `/ask` <br>
-  => `json { asked_id: int, content: string }`
-  
-- POST `/answer` <br>
-  => `json { question_id: int, content, string }`
+- POST `/users/<user_id>/ask` <br>
+  => `json { anonymous: bool, content: string }` <br>
+  requires access token <br>
+  add a question to the specified user (ask them)
 
-- GET `/users/<id: int>/questions` <br>
-  <=
+- GET `/users/<user_id>/questions` <br>
+  <= `json [ question1: question, question2: question, ... ]` <br>
+  returns the list of questions which were sent that user
 
-        json [
-            { 
-                answer: {
-                    answered_at: date,
-                    content: string,
-                    id: int,
-                    last_edit_at: date,
-                    likes: int,
-                    question_id: int (question which was answered)
-                },
-                question: {
-                    asked_at: date, 
-                    asked_id: int, (user who was asked)
-                    content: string,
-                    id: int,
-                    likes: int
-                }
-            },
-            ...
-        ] 
-    ``
+- POST `/questions/<question_id>/answer` <br>
+  => `json { content: string }` <br>
+  requires access token of the user with `id` equal to the `asked_id` of the question being answered<br>
+  answers a specific question
 
-- GET `/users [?search=<string>]` <br>
-  <= `json [ user, user2, ...]`
-  search= is for filtering by name
+- GET `/questions/<question_id>` <br>
+  <= `json question` <br>
+  returns the question with given id
+
