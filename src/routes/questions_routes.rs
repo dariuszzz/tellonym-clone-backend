@@ -19,7 +19,7 @@ pub async fn answer_question(
     let user: user::Model = query::user_by_username(db, &username).await?;
 
     //This is here to check whether question (id: question_id) actually exists
-    let QuestionDTO { question, .. } = query::question_w_answer_by_id(db, question_id).await?;
+    let QuestionDTO { question, answer } = query::question_w_answer_by_id(db, question_id).await?;
 
     //TODO: Add editing of questions
 
@@ -27,18 +27,27 @@ pub async fn answer_question(
     
     let now = chrono::offset::Utc::now().naive_utc();
 
-    let answer = answer::ActiveModel {
-        question_id: Set(question_id),
-        content: Set(content.to_string()),
-        answered_at: Set(now),
-        last_edit_at: Set(now),
-        ..Default::default()
+    let answer: answer::ActiveModel = match answer {
+        Some(answer) => {
+            let mut ans: answer::ActiveModel = answer.into();
+
+            ans.content = Set(content.to_string());
+            ans.last_edit_at = Set(now);
+            
+            ans
+        },
+        None => {
+            answer::ActiveModel {
+                question_id: Set(question_id),
+                content: Set(content.to_string()),
+                answered_at: Set(now),
+                last_edit_at: Set(now),
+                ..Default::default()
+            }
+        }
     };
 
-    answer.save(db)
-        .await
-        .map_err(|_| String::from("Database error"))?;
-
+    mutation::add_or_edit_answer(db, answer).await?;
 
     Ok(())
 }

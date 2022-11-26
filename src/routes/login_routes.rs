@@ -40,9 +40,7 @@ pub async fn register(
         ..Default::default()
     };
     
-    user.insert(db)
-        .await
-        .map_err(|_| String::from("Database error"))?;
+    mutation::register_user(db, user).await?;
 
     let access_jwt = JWTUtil::sign_access_jwt(&username);
     let refresh_jwt = JWTUtil::sign_refresh_jwt(&username);

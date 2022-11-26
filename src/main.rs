@@ -32,6 +32,9 @@ fn rocket() -> _ {
             routes::ask_question, 
             routes::users,
             routes::current_user,
+            routes::follow_user,
+            routes::user_followers,
+            routes::user_follows,
 
             routes::answer_question, 
             routes::get_question,
