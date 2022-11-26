@@ -4,7 +4,7 @@ Api for https://github.com/dariuszzz/tellonym-clone
 ## Requirements:
 - min rust 1.65 nightly
 - mysql database named `tellonym_clone` on localhost
-- .env with DATABASE_URL and ACCESS_SECRET
+- .env with DATABASE_URL, REFRESH_SECRET and ACCESS_SECRET
 
 # Types 
 
@@ -64,7 +64,7 @@ json {
   => `json { username: string, password: string }` <br>
   <= access token (plaintext), refresh token in cookie
 
-- POST `/refres` <br>
+- POST `/refresh` <br>
   <= access token (plaintext) <br>
   requires refresh token in cookies
 
@@ -85,4 +85,3 @@ json {
 - GET `/questions/<question_id>` <br>
   <= `json question` <br>
   returns the question with given id
-
