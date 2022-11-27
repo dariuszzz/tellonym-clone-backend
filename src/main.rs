@@ -39,6 +39,8 @@ fn rocket() -> _ {
 
             routes::answer_question, 
             routes::get_question,
+            routes::vote_answer,
+            routes::vote_question,
         ])
 }
 

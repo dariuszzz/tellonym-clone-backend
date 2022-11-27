@@ -1,4 +1,6 @@
 
+use serde::Serialize;
+
 use super::*;
 
 #[get("/users/<user_id>")]
@@ -10,25 +12,43 @@ pub async fn get_user(conn: Connection<'_, Db>, user_id: i32) -> Result<Json<use
     Ok(Json(user))
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct UserWithLikesDTO {
+    user: user::Model,
+    likes: Vec<like::Model>
+}
+
 #[get("/me")]
-pub async fn current_user(conn: Connection<'_, Db>, user: UserGuard) -> Result<Json<user::Model>, TellonymError> {
+pub async fn current_user(conn: Connection<'_, Db>, user: UserGuard) -> Result<Json<UserWithLikesDTO>, TellonymError> {
     let db = conn.into_inner();
     let username = user.into_inner();
 
-    let user: user::Model = query::user_by_username(db, &username).await?;
+    let user: Vec<(user::Model, Vec<like::Model>)> = User::find()
+        .filter(user::Column::Username.eq(username))
+        .find_with_related(Like)
+        .all(db)
+        .await
+        .map_err(|e| TellonymError::DatabaseError(e.to_string()))?;
 
-    Ok(Json(user))
+    let (user, likes) = user.into_iter().next().ok_or(TellonymError::ResourceNotFound)?;
+
+    let user_dto = UserWithLikesDTO {
+        user,
+        likes
+    };
+
+    Ok(Json(user_dto))
 }
 
 #[get("/users?<search>")]
 pub async fn users(conn: Connection<'_, Db>, search: Option<&'_ str>) -> Result<Json<Vec<user::Model>>, TellonymError> {
     let db = conn.into_inner();
-
-    match search{
+ 
+    match search {
         Some(search) => { 
 
             //Username starts with `search`
-            let users = query::users_starting_with(db, search).await?;
+            let users = query::username_contains(db, search).await?;
 
             Ok(Json(users))
         }
@@ -124,7 +144,7 @@ pub async fn follow_user(conn: Connection<'_, Db>, user: UserGuard, to_follow_id
 
     if wants_to_follow.id == to_be_followed.id { return Err(TellonymError::ConstraintError) };
 
-    let follow: Option<follow::Model> = query::follows_with_both_ids(db, wants_to_follow.id, to_follow_id).await?;
+    let follow: Option<follow::Model> = query::exact_follow(db, wants_to_follow.id, to_follow_id).await?;
     
     match follow {
         Some(follow) => {

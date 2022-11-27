@@ -14,6 +14,7 @@ pub use entity::user::{self, Entity as User};
 pub use entity::question::{self, Entity as Question};
 pub use entity::answer::{self, Entity as Answer};
 pub use entity::follow::{self, Entity as Follow};
+pub use entity::like::{self, Entity as Like};
 
 use sea_orm::EntityTrait;
 use sea_orm::ColumnTrait;

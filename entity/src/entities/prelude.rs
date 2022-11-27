@@ -4,3 +4,4 @@ pub use super::user::Entity as User;
 pub use super::answer::Entity as Answer;
 pub use super::question::Entity as Question;
 pub use super::follow::Entity as Follow;
+pub use super::like::Entity as Like;

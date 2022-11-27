@@ -13,7 +13,8 @@ impl MigrationTrait for Migration {
         manager.exec_stmt(schema.create_table_from_entity(entity::user::Entity)).await?;
         manager.exec_stmt(schema.create_table_from_entity(entity::question::Entity)).await?;
         manager.exec_stmt(schema.create_table_from_entity(entity::answer::Entity)).await?;
-        manager.exec_stmt(schema.create_table_from_entity(entity::follow::Entity)).await
+        manager.exec_stmt(schema.create_table_from_entity(entity::follow::Entity)).await?;
+        manager.exec_stmt(schema.create_table_from_entity(entity::like::Entity)).await
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
@@ -27,6 +28,9 @@ impl MigrationTrait for Migration {
             .await?;
         manager
             .drop_table(Table::drop().table(entity::follow::Entity).to_owned())
+            .await?;
+        manager
+            .drop_table(Table::drop().table(entity::like::Entity).to_owned())
             .await?;
         manager
             .drop_table(Table::drop().table(entity::user::Entity).to_owned())

@@ -1,4 +1,5 @@
 
+use entity::like::LikeType;
 use migration::Condition;
 
 use super::*;
@@ -62,9 +63,9 @@ pub async fn question_w_answer_by_id(db: DbType<'_>, question_id: i32) -> Result
 }
 
 #[must_use]
-pub async fn users_starting_with(db: DbType<'_>, search: &str) -> Result<Vec<user::Model>, TellonymError> {
+pub async fn username_contains(db: DbType<'_>, search: &str) -> Result<Vec<user::Model>, TellonymError> {
     let users: Vec<user::Model> = User::find()
-        .filter(user::Column::Username.like(&format!("{}%", search)))
+        .filter(user::Column::Username.contains(search))
         .all(db)
         .await
         .map_err(|e| TellonymError::DatabaseError(e.to_string()))?;
@@ -104,7 +105,7 @@ pub async fn follows_with_follower_id(db: DbType<'_>, follower_id: i32) -> Resul
     Ok(follows)
 } 
 
-pub async fn follows_with_both_ids(db: DbType<'_>, follower_id: i32, following_id: i32) -> Result<Option<follow::Model>, TellonymError> {
+pub async fn exact_follow(db: DbType<'_>, follower_id: i32, following_id: i32) -> Result<Option<follow::Model>, TellonymError> {
     let follow = Follow::find()
         .filter(Condition::all()
             .add(follow::Column::FollowerId.eq(follower_id))
@@ -129,3 +130,29 @@ pub async fn users_with_ids(db: DbType<'_>, ids: &[i32]) -> Result<Vec<user::Mod
 
     Ok(users)
 }
+
+#[must_use]
+pub async fn user_likes_by_id(db: DbType<'_>, user_id: i32) -> Result<Vec<like::Model>, TellonymError> {
+    let likes = Like::find()
+        .filter(like::Column::LikerId.eq(user_id))
+        .all(db)
+        .await
+        .map_err(|e| TellonymError::DatabaseError(e.to_string()))?;
+
+    Ok(likes)
+}
+
+#[must_use]
+pub async fn exact_like(db: DbType<'_>, user_id: i32, like_type: LikeType, resource_id: i32) -> Result<Option<like::Model>, TellonymError> {
+    let like = Like::find()
+        .filter(Condition::all()
+            .add(like::Column::LikerId.eq(user_id))
+            .add(like::Column::LikeType.eq(like_type))
+            .add(like::Column::ResourceId.eq(resource_id)))
+        .one(db)
+        .await
+        .map_err(|e| TellonymError::DatabaseError(e.to_string()))?;
+
+    Ok(like)
+}
+

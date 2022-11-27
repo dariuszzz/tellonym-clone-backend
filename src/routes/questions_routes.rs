@@ -1,5 +1,7 @@
 
 
+use entity::like::LikeType;
+
 use super::*;
 
 #[derive(Deserialize)]
@@ -61,4 +63,148 @@ pub async fn get_question(conn: Connection<'_, Db>, question_id: i32) -> Result<
     let question_and_answer: QuestionDTO = query::question_w_answer_by_id(db, question_id).await?;
 
     Ok(Json(question_and_answer))
+}
+
+#[derive(Deserialize)]
+pub struct VoteData {
+    is_like: bool,
+}
+
+#[post("/questions/<question_id>/vote_question", data = "<vote_data>")]
+pub async fn vote_question(conn: Connection<'_, Db>, user: UserGuard, question_id: i32, vote_data: Json<VoteData>) -> Result<Status, TellonymError> {
+    let db = conn.into_inner();
+    let VoteData { is_like  } = vote_data.into_inner();
+    let username = user.into_inner();
+
+    let user = query::user_by_username(db, &username).await?;
+    let QuestionDTO { question, .. } = query::question_w_answer_by_id(db, question_id).await?;
+
+    let request_like_type = if is_like { LikeType::QuestionLike } else { LikeType::QuestionDislike };
+
+    let like = query::exact_like(db, user.id, request_like_type, question.id).await?;
+    
+    match like {
+        Some(like) => { 
+            mutation::delete_like(db, like).await?;
+
+            if is_like {
+                change_question_vote(db, question, -1).await?;
+            } else {
+                change_question_vote(db, question, 1).await?;
+            }
+            // -1 do question if is_like
+            // +1 do question if not is_like
+        }
+        None => {
+            let opposite_like = query::exact_like(db, user.id, request_like_type.opposite_type(), question_id).await?;
+            
+            if let Some(like) = opposite_like {
+                let mut active_like: like::ActiveModel = like.into();
+        
+                active_like.like_type = Set(request_like_type);
+    
+                mutation::update_like(db, active_like).await?;
+                
+                // +2 do question if is_like
+                // -2 do question if not is_like
+                
+                if is_like {
+                    change_question_vote(db, question, 2).await?;
+                } else {
+                    change_question_vote(db, question, -2).await?;
+                }
+
+            } else {
+                let new_like = like::ActiveModel {
+                    liker_id: Set(user.id),
+                    like_type: Set(request_like_type),
+                    resource_id: Set(question_id),
+                    ..Default::default()
+                };
+
+                mutation::update_like(db, new_like).await?;
+
+                // +1 do question if is_like
+                // -1 do question if not is_like
+                if is_like {
+                    change_question_vote(db, question, 1).await?;
+                } else {
+                    change_question_vote(db, question, -1).await?;
+                }
+            }
+        }
+    }
+
+    Ok(Status::Created)
+}
+
+
+#[post("/questions/<question_id>/vote_answer", data = "<vote_data>")]
+pub async fn vote_answer(conn: Connection<'_, Db>, user: UserGuard, question_id: i32, vote_data: Json<VoteData>) -> Result<Status, TellonymError> {
+    let db = conn.into_inner();
+    let VoteData { is_like  } = vote_data.into_inner();
+    let username = user.into_inner();
+
+    let user = query::user_by_username(db, &username).await?;
+    let QuestionDTO { answer, .. } = query::question_w_answer_by_id(db, question_id).await?;
+
+    let answer = answer.ok_or(TellonymError::ResourceNotFound)?;
+
+    let request_like_type = if is_like { LikeType::QuestionLike } else { LikeType::QuestionDislike };
+
+    let like = query::exact_like(db, user.id, request_like_type, answer.id).await?;
+    
+    match like {
+        Some(like) => { 
+            mutation::delete_like(db, like).await?;
+
+            if is_like {
+                change_answer_vote(db, answer, -1).await?;
+            } else {
+                change_answer_vote(db, answer, 1).await?;
+            }
+            // -1 do question if is_like
+            // +1 do question if not is_like
+        }
+        None => {
+            let opposite_like = query::exact_like(db, user.id, request_like_type.opposite_type(), question_id).await?;
+            
+            if let Some(like) = opposite_like {
+                let mut active_like: like::ActiveModel = like.into();
+        
+                active_like.like_type = Set(request_like_type);
+    
+                mutation::update_like(db, active_like).await?;
+                
+                // +2 do question if is_like
+                // -2 do question if not is_like
+                
+                if is_like {
+                    change_answer_vote(db, answer, 2).await?;
+                } else {
+                    change_answer_vote(db, answer, -2).await?;
+                }
+
+            } else {
+                let new_like = like::ActiveModel {
+                    liker_id: Set(user.id),
+                    like_type: Set(request_like_type),
+                    resource_id: Set(question_id),
+                    ..Default::default()
+                };
+
+                mutation::update_like(db, new_like).await?;
+
+                // +1 do question if is_like
+                // -1 do question if not is_like
+                if is_like {
+                    change_answer_vote(db, answer, 1).await?;
+                } else {
+                    change_answer_vote(db, answer, -1).await?;
+                }
+            }
+        }
+    }
+
+    Ok(Status::Created)
 }
