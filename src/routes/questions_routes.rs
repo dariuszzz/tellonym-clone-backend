@@ -150,7 +150,7 @@ pub async fn vote_answer(conn: Connection<'_, Db>, user: UserGuard, question_id:
 
     let answer = answer.ok_or(TellonymError::ResourceNotFound)?;
 
-    let request_like_type = if is_like { LikeType::QuestionLike } else { LikeType::QuestionDislike };
+    let request_like_type = if is_like { LikeType::AnswerLike } else { LikeType::AnswerDislike };
 
     let like = query::exact_like(db, user.id, request_like_type, answer.id).await?;
     
@@ -167,7 +167,7 @@ pub async fn vote_answer(conn: Connection<'_, Db>, user: UserGuard, question_id:
             // +1 do question if not is_like
         }
         None => {
-            let opposite_like = query::exact_like(db, user.id, request_like_type.opposite_type(), question_id).await?;
+            let opposite_like = query::exact_like(db, user.id, request_like_type.opposite_type(), answer.id).await?;
             
             if let Some(like) = opposite_like {
                 let mut active_like: like::ActiveModel = like.into();
@@ -189,7 +189,7 @@ pub async fn vote_answer(conn: Connection<'_, Db>, user: UserGuard, question_id:
                 let new_like = like::ActiveModel {
                     liker_id: Set(user.id),
                     like_type: Set(request_like_type),
-                    resource_id: Set(question_id),
+                    resource_id: Set(answer.id),
                     ..Default::default()
                 };
 
