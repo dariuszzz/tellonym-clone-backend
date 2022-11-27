@@ -25,6 +25,7 @@ use sea_orm::ModelTrait;
 
 use migration::Expr;
 
+use crate::error::TellonymError;
 
 type DbType<'a> = &'a <<Db as Database>::Pool as Pool>::Connection;
 

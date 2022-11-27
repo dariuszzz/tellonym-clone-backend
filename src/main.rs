@@ -4,6 +4,7 @@ mod jwt_util;
 mod cors;
 mod routes;
 mod ops;
+mod error;
 
 use cors::CORS;
 use pool::Db;

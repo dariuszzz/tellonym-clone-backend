@@ -1,3 +1,5 @@
+use rocket::http::Status;
+
 use super::*;
 
 #[derive(Deserialize)]
@@ -11,7 +13,7 @@ pub async fn answer_question(
     user: UserGuard, 
     question_id: i32,
     answer_data: Json<AnswerQuestionData<'_>>
-) -> Result<(), String> {
+) -> Result<Status, TellonymError> {
     let AnswerQuestionData { content } = answer_data.into_inner();
     let db = conn.into_inner();
     let username = user.into_inner();
@@ -23,7 +25,7 @@ pub async fn answer_question(
 
     //TODO: Add editing of questions
 
-    if question.asked_id != user.id { return Err(String::from("You are not allowed to answer this question")) }
+    if question.asked_id != user.id { return Err(TellonymError::ConstraintError) }
     
     let now = chrono::offset::Utc::now().naive_utc();
 
@@ -49,11 +51,11 @@ pub async fn answer_question(
 
     mutation::add_or_edit_answer(db, answer).await?;
 
-    Ok(())
+    Ok(Status::Created)
 }
 
 #[get("/questions/<question_id>")]
-pub async fn get_question(conn: Connection<'_, Db>, question_id: i32) -> Result<Json<QuestionDTO>, String> {
+pub async fn get_question(conn: Connection<'_, Db>, question_id: i32) -> Result<Json<QuestionDTO>, TellonymError> {
     let db = conn.into_inner();
 
     let question_and_answer: QuestionDTO = query::question_w_answer_by_id(db, question_id).await?;

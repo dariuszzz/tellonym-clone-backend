@@ -1,7 +1,8 @@
+
 use super::*;
 
 #[get("/users/<user_id>")]
-pub async fn get_user(conn: Connection<'_, Db>, user_id: i32) -> Result<Json<user::Model>, String> {
+pub async fn get_user(conn: Connection<'_, Db>, user_id: i32) -> Result<Json<user::Model>, TellonymError> {
     let db = conn.into_inner();
 
     let user: user::Model = query::user_by_id(db, user_id).await?;
@@ -10,7 +11,7 @@ pub async fn get_user(conn: Connection<'_, Db>, user_id: i32) -> Result<Json<use
 }
 
 #[get("/me")]
-pub async fn current_user(conn: Connection<'_, Db>, user: UserGuard) -> Result<Json<user::Model>, String> {
+pub async fn current_user(conn: Connection<'_, Db>, user: UserGuard) -> Result<Json<user::Model>, TellonymError> {
     let db = conn.into_inner();
     let username = user.into_inner();
 
@@ -20,7 +21,7 @@ pub async fn current_user(conn: Connection<'_, Db>, user: UserGuard) -> Result<J
 }
 
 #[get("/users?<search>")]
-pub async fn users(conn: Connection<'_, Db>, search: Option<&'_ str>) -> Result<Json<Vec<user::Model>>, String> {
+pub async fn users(conn: Connection<'_, Db>, search: Option<&'_ str>) -> Result<Json<Vec<user::Model>>, TellonymError> {
     let db = conn.into_inner();
 
     match search{
@@ -48,7 +49,7 @@ pub struct AskQuestionData<'a> {
 }
 
 #[post("/users/<asked_id>/ask", data = "<question_data>")]
-pub async fn ask_question(conn: Connection<'_, Db>, user: UserGuard, asked_id: i32,  question_data: Json<AskQuestionData<'_>>) -> Result<(), String> {
+pub async fn ask_question(conn: Connection<'_, Db>, user: UserGuard, asked_id: i32,  question_data: Json<AskQuestionData<'_>>) -> Result<Status, TellonymError> {
     let AskQuestionData { anonymous,  content } = question_data.into_inner();
     let username = user.into_inner();
     let db = conn.into_inner();
@@ -58,7 +59,7 @@ pub async fn ask_question(conn: Connection<'_, Db>, user: UserGuard, asked_id: i
     //this is here to check whether the user (id: asked_id) actually exists
     let user_being_asked: user::Model = query::user_by_id(db, asked_id).await?;
 
-    if user_being_asked.id == user_asking_question.id { return Err(String::from("You cannot ask yourself a question")) }
+    if user_being_asked.id == user_asking_question.id { return Err(TellonymError::ConstraintError) }
 
     let question = question::ActiveModel {
         content: Set(content.to_string()),
@@ -70,11 +71,11 @@ pub async fn ask_question(conn: Connection<'_, Db>, user: UserGuard, asked_id: i
 
     mutation::add_question(db, question).await?;
 
-    Ok(())
+    Ok(Status::Created)
 }
 
 #[get("/users/<user_id>/questions")]
-pub async fn user_questions(conn: Connection<'_, Db>, user_id: i32) -> Result<Json<Vec<QuestionDTO>>, String> {
+pub async fn user_questions(conn: Connection<'_, Db>, user_id: i32) -> Result<Json<Vec<QuestionDTO>>, TellonymError> {
     let db = conn.into_inner();
 
     let questions_and_answers = query::questions_w_answers_by_asked_id(db, user_id).await?;
@@ -83,7 +84,7 @@ pub async fn user_questions(conn: Connection<'_, Db>, user_id: i32) -> Result<Js
 }
 
 #[get("/users/<user_id>/follows")]
-pub async fn user_follows(conn: Connection<'_, Db>, user_id: i32) -> Result<Json<Vec<user::Model>>, String> {
+pub async fn user_follows(conn: Connection<'_, Db>, user_id: i32) -> Result<Json<Vec<user::Model>>, TellonymError> {
     let db = conn.into_inner();
 
     let follows = query::follows_with_follower_id(db, user_id).await?;
@@ -98,7 +99,7 @@ pub async fn user_follows(conn: Connection<'_, Db>, user_id: i32) -> Result<Json
 }
 
 #[get("/users/<user_id>/followers")]
-pub async fn user_followers(conn: Connection<'_, Db>, user_id: i32) -> Result<Json<Vec<user::Model>>, String> {
+pub async fn user_followers(conn: Connection<'_, Db>, user_id: i32) -> Result<Json<Vec<user::Model>>, TellonymError> {
     let db = conn.into_inner();
 
     let follows = query::follows_with_following_id(db, user_id).await?;
@@ -114,14 +115,14 @@ pub async fn user_followers(conn: Connection<'_, Db>, user_id: i32) -> Result<Js
 
 //TODO: 
 #[post("/users/<to_follow_id>/follow")]
-pub async fn follow_user(conn: Connection<'_, Db>, user: UserGuard, to_follow_id: i32) -> Result<(), String> {
+pub async fn follow_user(conn: Connection<'_, Db>, user: UserGuard, to_follow_id: i32) -> Result<Status, TellonymError> {
     let db = conn.into_inner();
     let username = user.into_inner();
 
     let wants_to_follow = query::user_by_username(db, &username).await?;
     let to_be_followed = query::user_by_id(db, to_follow_id).await?;
 
-    if wants_to_follow.id == to_be_followed.id { return Err(String::from("You can not follow yourself")) };
+    if wants_to_follow.id == to_be_followed.id { return Err(TellonymError::ConstraintError) };
 
     let follow: Option<follow::Model> = query::follows_with_both_ids(db, wants_to_follow.id, to_follow_id).await?;
     
@@ -145,7 +146,7 @@ pub async fn follow_user(conn: Connection<'_, Db>, user: UserGuard, to_follow_id
         }
     }
 
-    Ok(())
+    Ok(Status::Created)
 }
 
 

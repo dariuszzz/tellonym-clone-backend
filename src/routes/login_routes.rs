@@ -1,16 +1,16 @@
-use rocket::http::SameSite;
+use rocket::{http::SameSite, response::status};
 
 use super::*;
 
 #[post("/refresh")]
-pub async fn refresh(cookies: &CookieJar<'_>) -> Result<String, String> {
+pub async fn refresh(cookies: &CookieJar<'_>) -> Result<String, TellonymError> {
 
-    let refresh_token_cookie = cookies.get("refresh_token").ok_or(String::from("No refresh cookie"))?;
+    let refresh_token_cookie = cookies.get("refresh_token")
+        .ok_or(TellonymError::NoRefreshCookie)?;
     let refresh_token = refresh_token_cookie.value();
  
-    let username = JWTUtil::verify_refresh_jwt(refresh_token);
-
-    if let None = username { return Err(String::from("Invalid refresh token")) }
+    let username = JWTUtil::verify_refresh_jwt(refresh_token)
+        .ok_or(TellonymError::InvalidJWT);
 
     let access_jwt = JWTUtil::sign_access_jwt(&username.unwrap());
 
@@ -29,12 +29,12 @@ pub async fn register(
     cookies: &CookieJar<'_>,
     conn: Connection<'_, Db>, 
     register_data: Json<LoginData<'_>>
-) -> Result<String, String> {
+) -> Result<status::Created<String>, TellonymError> {
     let LoginData { username, password } = register_data.into_inner();
     let db = conn.into_inner();
     
     let hashed_pass = hash(password, bcrypt::DEFAULT_COST)
-        .map_err(|_| String::from("Hashing error"))?;
+        .map_err(|_| TellonymError::ServerError)?;
 
     let user = user::ActiveModel {
         username: Set(username.to_string()),
@@ -55,7 +55,7 @@ pub async fn register(
         .finish()
     );
 
-    Ok(access_jwt)
+    Ok(status::Created::new("?").body(access_jwt))
 }
 
 #[post("/login", data = "<login_data>")]
@@ -63,18 +63,17 @@ pub async fn login(
     cookies: &CookieJar<'_>,
     conn: Connection<'_, Db>, 
     login_data: Json<LoginData<'_>>
-) -> Result<String, String> {
+) -> Result<String, TellonymError> {
     let LoginData { username, password } = login_data.into_inner();
     let db = conn.into_inner();
 
     let user: user::Model = query::user_by_username(db, username).await?;
 
     let valid = verify(password, &user.password)
-        .map_err(|_| String::from("Veryfing error"));
+        .map_err(|_| TellonymError::ServerError)?;
 
-    if valid.unwrap() == false {
-        return Err(String::from("Invalid token"))
-    }
+    if !valid { return Err(TellonymError::InvalidLogin); }
+
 
     let access_jwt = JWTUtil::sign_access_jwt(&username);
     let refresh_jwt = JWTUtil::sign_refresh_jwt(&username);
