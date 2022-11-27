@@ -9,6 +9,7 @@ pub enum TellonymError {
     InvalidLogin,
     ConstraintError,
     ServerError,
+    BadHeaders,
     DatabaseError(String),
 }
 
@@ -24,6 +25,7 @@ impl<'r> Responder<'r, 'static> for TellonymError {
             Self::InvalidLogin => Status::Unauthorized,
             Self::ConstraintError => Status::BadRequest,
             Self::ServerError => Status::InternalServerError,
+            Self::BadHeaders => Status::BadRequest,
             Self::DatabaseError(_) => Status::InternalServerError,
         };
 

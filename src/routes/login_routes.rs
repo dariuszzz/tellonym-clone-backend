@@ -7,6 +7,7 @@ pub async fn refresh(cookies: &CookieJar<'_>) -> Result<String, TellonymError> {
 
     let refresh_token_cookie = cookies.get("refresh_token")
         .ok_or(TellonymError::NoRefreshCookie)?;
+
     let refresh_token = refresh_token_cookie.value();
  
     let username = JWTUtil::verify_refresh_jwt(refresh_token)
