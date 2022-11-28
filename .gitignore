@@ -2,5 +2,5 @@
 /Cargo.lock
 .env
 todo
-./pfps/**
-!./pfps/0.png
+!/pfps/0.png
+/pfps/**
