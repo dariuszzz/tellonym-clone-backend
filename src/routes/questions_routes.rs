@@ -18,9 +18,9 @@ pub async fn answer_question(
 ) -> Result<Status, TellonymError> {
     let AnswerQuestionData { content } = answer_data.into_inner();
     let db = conn.into_inner();
-    let username = user.into_inner();
+    let user_id = user.into_inner();
 
-    let user: user::Model = query::user_by_username(db, &username).await?;
+    let user: user::Model = query::user_by_id(db, user_id).await?;
 
     //This is here to check whether question (id: question_id) actually exists
     let QuestionDTO { question, answer } = query::question_w_answer_by_id(db, question_id).await?;
@@ -57,7 +57,10 @@ pub async fn answer_question(
 }
 
 #[get("/questions/<question_id>")]
-pub async fn get_question(conn: Connection<'_, Db>, question_id: i32) -> Result<Json<QuestionDTO>, TellonymError> {
+pub async fn get_question(
+    conn: Connection<'_, Db>, 
+    question_id: i32
+) -> Result<Json<QuestionDTO>, TellonymError> {
     let db = conn.into_inner();
 
     let question_and_answer: QuestionDTO = query::question_w_answer_by_id(db, question_id).await?;
@@ -71,12 +74,17 @@ pub struct VoteData {
 }
 
 #[post("/questions/<question_id>/vote_question", data = "<vote_data>")]
-pub async fn vote_question(conn: Connection<'_, Db>, user: UserGuard, question_id: i32, vote_data: Json<VoteData>) -> Result<Status, TellonymError> {
+pub async fn vote_question(
+    conn: Connection<'_, Db>, 
+    user: UserGuard, 
+    question_id: i32, 
+    vote_data: Json<VoteData>
+) -> Result<Status, TellonymError> {
     let db = conn.into_inner();
     let VoteData { is_like  } = vote_data.into_inner();
-    let username = user.into_inner();
+    let user_id = user.into_inner();
 
-    let user = query::user_by_username(db, &username).await?;
+    let user = query::user_by_id(db, user_id).await?;
     let QuestionDTO { question, .. } = query::question_w_answer_by_id(db, question_id).await?;
 
     let request_like_type = if is_like { LikeType::QuestionLike } else { LikeType::QuestionDislike };
@@ -140,12 +148,17 @@ pub async fn vote_question(conn: Connection<'_, Db>, user: UserGuard, question_i
 
 
 #[post("/questions/<question_id>/vote_answer", data = "<vote_data>")]
-pub async fn vote_answer(conn: Connection<'_, Db>, user: UserGuard, question_id: i32, vote_data: Json<VoteData>) -> Result<Status, TellonymError> {
+pub async fn vote_answer(
+    conn: Connection<'_, Db>, 
+    user: UserGuard, 
+    question_id: i32, 
+    vote_data: Json<VoteData>
+) -> Result<Status, TellonymError> {
     let db = conn.into_inner();
     let VoteData { is_like  } = vote_data.into_inner();
-    let username = user.into_inner();
+    let user_id = user.into_inner();
 
-    let user = query::user_by_username(db, &username).await?;
+    let user = query::user_by_id(db, user_id).await?;
     let QuestionDTO { answer, .. } = query::question_w_answer_by_id(db, question_id).await?;
 
     let answer = answer.ok_or(TellonymError::ResourceNotFound)?;

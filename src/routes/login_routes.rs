@@ -10,10 +10,10 @@ pub async fn refresh(cookies: &CookieJar<'_>) -> Result<String, TellonymError> {
 
     let refresh_token = refresh_token_cookie.value();
  
-    let username = JWTUtil::verify_refresh_jwt(refresh_token)
-        .ok_or(TellonymError::InvalidJWT);
+    let user_id = JWTUtil::verify_refresh_jwt(refresh_token)
+        .ok_or(TellonymError::InvalidJWT)?;
 
-    let access_jwt = JWTUtil::sign_access_jwt(&username.unwrap());
+    let access_jwt = JWTUtil::sign_access_jwt(user_id);
 
     Ok(access_jwt)
 }
@@ -43,10 +43,10 @@ pub async fn register(
         ..Default::default()
     };
     
-    mutation::register_user(db, user).await?;
-
-    let access_jwt = JWTUtil::sign_access_jwt(&username);
-    let refresh_jwt = JWTUtil::sign_refresh_jwt(&username);
+    let user =mutation::register_user(db, user).await?;
+    
+    let access_jwt = JWTUtil::sign_access_jwt(user.id);
+    let refresh_jwt = JWTUtil::sign_refresh_jwt(user.id);
 
     cookies.add(
         Cookie::build("refresh_token", refresh_jwt)
@@ -76,8 +76,8 @@ pub async fn login(
     if !valid { return Err(TellonymError::InvalidLogin); }
 
 
-    let access_jwt = JWTUtil::sign_access_jwt(&username);
-    let refresh_jwt = JWTUtil::sign_refresh_jwt(&username);
+    let access_jwt = JWTUtil::sign_access_jwt(user.id);
+    let refresh_jwt = JWTUtil::sign_refresh_jwt(user.id);
 
     cookies.add(
         Cookie::build("refresh_token", refresh_jwt)

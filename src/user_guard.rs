@@ -2,10 +2,10 @@ use rocket::{request::{FromRequest, self}, Request, http::Status};
 
 use crate::{jwt_util::JWTUtil, error::TellonymError};
 
-pub struct UserGuard(String);
+pub struct UserGuard(i32);
 
 impl UserGuard {
-    pub fn into_inner(self) -> String {
+    pub fn into_inner(self) -> i32 {
         self.0
     }
 }
@@ -29,11 +29,11 @@ impl<'r> FromRequest<'r> for UserGuard {
 
         if let Err(e) = jwt_token { return request::Outcome::Failure((Status::Unauthorized, e)) }
 
-        let username = JWTUtil::verify_access_jwt(jwt_token.expect("invalid token"))
+        let user_id = JWTUtil::verify_access_jwt(jwt_token.expect("invalid token"))
             .ok_or(TellonymError::InvalidJWT);
 
-        if let Err(e) = username { return request::Outcome::Failure((Status::Unauthorized, e)) }
+        if let Err(e) = user_id { return request::Outcome::Failure((Status::Unauthorized, e)) }
 
-        request::Outcome::Success(Self(username.unwrap()))
+        request::Outcome::Success(Self(user_id.unwrap()))
     }
 }
