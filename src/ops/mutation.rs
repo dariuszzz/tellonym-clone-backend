@@ -60,12 +60,16 @@ pub async fn change_follow_counts(
     let mut following: user::ActiveModel = following.into();
 
     let follower_following_count: i32 = follower.following_count.take()
+    let follower_following_count: u32 = follower.following_count.take()
         .unwrap_or(0);
     let following_follower_count: i32 = following.follower_count.take()
+    let following_follower_count: u32 = following.follower_count.take()
         .unwrap_or(0);
 
     follower.following_count = ActiveValue::Set(follower_following_count + change);
     following.follower_count = ActiveValue::Set(following_follower_count + change);
+    follower.following_count = ActiveValue::Set((follower_following_count as i32 + change) as u32);
+    following.follower_count = ActiveValue::Set((following_follower_count as i32 + change) as u32);
 
     follower = mutation::update_user(db, follower).await?;
     following = mutation::update_user(db, following).await?;

@@ -12,8 +12,8 @@ pub struct Model {
     #[serde(skip_deserializing)]
     #[serde(skip_serializing)]
     pub password: String,
-    pub follower_count: i32,
-    pub following_count: i32,
+    pub follower_count: u32,
+    pub following_count: u32,
     pub bio: String,
 }
 
