@@ -109,6 +109,7 @@ if required the access token needs to be in a Authorization header prefixed with
   <= `json question` <br>
   returns the question with given id
 
+<<<<<<< HEAD
 - POST `/questions/<question_id>/vote_question` <br>
   => `json { is_like: bool }` <br>
   votes on the question with question_id <br>
@@ -122,3 +123,14 @@ if required the access token needs to be in a Authorization header prefixed with
   is_like determines whether the vote is a like (true) or a dislike (false) <br>
   removes the vote if it already exists and changes it if the opposite already exists (ie dislike -> like, like -> dislike) <br>
   requires access token
+=======
+- POST `/editprofile` <br>
+  <= `mutliform { username?: string, current_pass?: string, password?: string, bio?: string, profile_pic?: file` <br>
+  requires access token <br>
+  sets whatever you pass (you stay logged in even if changing pass) <br>
+  if password is set then current_password has to be set as well (and equal to previous password)
+
+- GET `/pfps/<id>.png`
+  returns pfp of user with id `<id>` 
+  if the user does not have a pfp this returns the default pfp (at /pfps/0.jpg)
+>>>>>>> tmp

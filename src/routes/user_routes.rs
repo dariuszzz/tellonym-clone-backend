@@ -1,10 +1,15 @@
 
+use rocket::{fs::TempFile, form::Form};
 use serde::Serialize;
+use rocket::fs::relative;
 
 use super::*;
 
 #[get("/users/<user_id>")]
-pub async fn get_user(conn: Connection<'_, Db>, user_id: i32) -> Result<Json<user::Model>, TellonymError> {
+pub async fn get_user(
+    conn: Connection<'_, Db>, 
+    user_id: i32
+) -> Result<Json<user::Model>, TellonymError> {
     let db = conn.into_inner();
 
     let user: user::Model = query::user_by_id(db, user_id).await?;
@@ -19,12 +24,14 @@ pub struct UserWithLikesDTO {
 }
 
 #[get("/me")]
-pub async fn current_user(conn: Connection<'_, Db>, user: UserGuard) -> Result<Json<UserWithLikesDTO>, TellonymError> {
+pub async fn current_user(
+    conn: Connection<'_, Db>, 
+    user: UserGuard
+) -> Result<Json<UserWithLikesDTO>, TellonymError> {
     let db = conn.into_inner();
-    let username = user.into_inner();
+    let user_id = user.into_inner();
 
-    let user: Vec<(user::Model, Vec<like::Model>)> = User::find()
-        .filter(user::Column::Username.eq(username))
+    let user: Vec<(user::Model, Vec<like::Model>)> = User::find_by_id(user_id)
         .find_with_related(Like)
         .all(db)
         .await
@@ -41,7 +48,10 @@ pub async fn current_user(conn: Connection<'_, Db>, user: UserGuard) -> Result<J
 }
 
 #[get("/users?<search>")]
-pub async fn users(conn: Connection<'_, Db>, search: Option<&'_ str>) -> Result<Json<Vec<user::Model>>, TellonymError> {
+pub async fn users(
+    conn: Connection<'_, Db>, 
+    search: Option<&'_ str>
+) -> Result<Json<Vec<user::Model>>, TellonymError> {
     let db = conn.into_inner();
  
     match search {
@@ -69,12 +79,16 @@ pub struct AskQuestionData<'a> {
 }
 
 #[post("/users/<asked_id>/ask", data = "<question_data>")]
-pub async fn ask_question(conn: Connection<'_, Db>, user: UserGuard, asked_id: i32,  question_data: Json<AskQuestionData<'_>>) -> Result<Status, TellonymError> {
+pub async fn ask_question(
+    conn: Connection<'_, Db>, 
+    user: UserGuard, asked_id: i32, 
+    question_data: Json<AskQuestionData<'_>>
+) -> Result<Status, TellonymError> {
     let AskQuestionData { anonymous,  content } = question_data.into_inner();
-    let username = user.into_inner();
+    let user_id = user.into_inner();
     let db = conn.into_inner();
 
-    let user_asking_question: user::Model = query::user_by_username(db, &username).await?;
+    let user_asking_question: user::Model = query::user_by_id(db, user_id).await?;
 
     //this is here to check whether the user (id: asked_id) actually exists
     let user_being_asked: user::Model = query::user_by_id(db, asked_id).await?;
@@ -95,7 +109,10 @@ pub async fn ask_question(conn: Connection<'_, Db>, user: UserGuard, asked_id: i
 }
 
 #[get("/users/<user_id>/questions")]
-pub async fn user_questions(conn: Connection<'_, Db>, user_id: i32) -> Result<Json<Vec<QuestionDTO>>, TellonymError> {
+pub async fn user_questions(
+    conn: Connection<'_, Db>, 
+    user_id: i32
+) -> Result<Json<Vec<QuestionDTO>>, TellonymError> {
     let db = conn.into_inner();
 
     let questions_and_answers = query::questions_w_answers_by_asked_id(db, user_id).await?;
@@ -104,7 +121,10 @@ pub async fn user_questions(conn: Connection<'_, Db>, user_id: i32) -> Result<Js
 }
 
 #[get("/users/<user_id>/follows")]
-pub async fn user_follows(conn: Connection<'_, Db>, user_id: i32) -> Result<Json<Vec<user::Model>>, TellonymError> {
+pub async fn user_follows(
+    conn: Connection<'_, Db>, 
+    user_id: i32
+) -> Result<Json<Vec<user::Model>>, TellonymError> {
     let db = conn.into_inner();
 
     let follows = query::follows_with_follower_id(db, user_id).await?;
@@ -119,7 +139,10 @@ pub async fn user_follows(conn: Connection<'_, Db>, user_id: i32) -> Result<Json
 }
 
 #[get("/users/<user_id>/followers")]
-pub async fn user_followers(conn: Connection<'_, Db>, user_id: i32) -> Result<Json<Vec<user::Model>>, TellonymError> {
+pub async fn user_followers(
+    conn: Connection<'_, Db>, 
+    user_id: i32
+) -> Result<Json<Vec<user::Model>>, TellonymError> {
     let db = conn.into_inner();
 
     let follows = query::follows_with_following_id(db, user_id).await?;
@@ -135,11 +158,15 @@ pub async fn user_followers(conn: Connection<'_, Db>, user_id: i32) -> Result<Js
 
 //TODO: 
 #[post("/users/<to_follow_id>/follow")]
-pub async fn follow_user(conn: Connection<'_, Db>, user: UserGuard, to_follow_id: i32) -> Result<Status, TellonymError> {
+pub async fn follow_user(
+    conn: Connection<'_, Db>, 
+    user: UserGuard, 
+    to_follow_id: i32
+) -> Result<Status, TellonymError> {
     let db = conn.into_inner();
-    let username = user.into_inner();
+    let user_id = user.into_inner();
 
-    let wants_to_follow = query::user_by_username(db, &username).await?;
+    let wants_to_follow = query::user_by_id(db, user_id).await?;
     let to_be_followed = query::user_by_id(db, to_follow_id).await?;
 
     if wants_to_follow.id == to_be_followed.id { return Err(TellonymError::ConstraintError) };
@@ -169,4 +196,73 @@ pub async fn follow_user(conn: Connection<'_, Db>, user: UserGuard, to_follow_id
     Ok(Status::Created)
 }
 
+#[derive(FromForm)]
+pub struct EditProfileData<'a> {
+    username: Option<&'a str>,
+    current_password: Option<&'a str>,
+    password: Option<&'a str>,
+    bio: Option<&'a str>,
+    profile_pic: Option<TempFile<'a>>
+}
 
+#[post("/editprofile", data = "<edit_profile_data>")]
+pub async fn edit_profile(
+    conn: Connection<'_, Db>, 
+    user: UserGuard, 
+    edit_profile_data: Form<EditProfileData<'_>>
+) -> Result<Status, TellonymError> {
+    let db = conn.into_inner();
+    let user_id = user.into_inner();
+    let EditProfileData { 
+        username: new_username, 
+        current_password,
+        password: new_password, 
+        bio: new_bio,
+        profile_pic: new_profile_pic,
+    } = edit_profile_data.into_inner();
+ 
+    let user = query::user_by_id(db, user_id).await?;
+    
+    // figure out new values
+    let new_username = new_username.unwrap_or(&user.username).to_string();
+
+    let new_password = match (new_password, current_password) {
+        // if current_pass and new_pass were passed
+        (Some(new_pass), Some(current_pass)) => {
+            let current_pass_matches_old = verify(current_pass, &user.password)
+                .map_err(|_| TellonymError::ConstraintError)?;
+                
+            if current_pass_matches_old {
+                hash(new_pass, bcrypt::DEFAULT_COST)
+                    .map_err(|_| TellonymError::ServerError)?
+            } else {
+                user.password.clone()
+            }
+        }
+        _ => user.password.clone()
+    };
+
+    let new_bio = new_bio.unwrap_or(&user.bio).to_string();
+    
+    //set new data & save
+    let mut active_user: user::ActiveModel = user.into();
+    
+    active_user.username = Set(new_username);
+    active_user.password = Set(new_password);
+    active_user.bio = Set(new_bio);
+    
+    mutation::update_user(db, active_user).await?;
+
+    //Save pfp if it was passed
+    if let Some(mut new_pfp) = new_profile_pic {
+        let path = relative!("pfps").to_string() + &format!("\\{}.png", user_id);
+
+        new_pfp.persist_to(path)
+            .await
+            .map_err(|_| {
+                return TellonymError::ServerError;
+            })?;
+    }
+    
+    Ok(Status::Created)
+}
