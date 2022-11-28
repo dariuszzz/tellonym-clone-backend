@@ -2,6 +2,7 @@
 use rocket::{fs::TempFile, form::Form};
 use serde::Serialize;
 use rocket::fs::relative;
+use serde_json::json;
 
 use super::*;
 
@@ -115,7 +116,7 @@ pub async fn user_questions(
 ) -> Result<Json<Vec<QuestionDTO>>, TellonymError> {
     let db = conn.into_inner();
 
-    let questions_and_answers = query::questions_w_answers_by_asked_id(db, user_id).await?;
+    let questions_and_answers = query::questions_w_answers_by_asked_id(db, &[user_id]).await?;
 
     Ok(Json(questions_and_answers))
 }
@@ -265,4 +266,35 @@ pub async fn edit_profile(
     }
     
     Ok(Status::Created)
+}
+
+#[get("/homepage")]
+pub async fn get_homepage(
+    conn: Connection<'_, Db>, 
+    user: UserGuard
+) -> Result<Json<Vec<serde_json::Value>>, TellonymError> {
+    let db = conn.into_inner();
+    let user_id = user.into_inner();
+    
+    let follows = query::follows_with_follower_id(db, user_id).await?;
+
+    let following_ids = follows.into_iter()
+        .map(|follow_model| follow_model.following_id)
+        .collect::<Vec<_>>();
+
+    let questions = query::questions_w_answers_by_asked_id(db, &following_ids).await?;
+
+    let answered = questions.into_iter()
+        .filter(|dto| dto.answer.is_some())
+        .map(|dto| (dto.question, dto.answer.unwrap()))
+        .collect::<Vec<_>>();
+    
+    let json = answered.iter().map(|(question, answer)| json!(
+        {
+            "question": question,
+            "answer": answer
+        }
+    )).collect::<Vec<_>>();
+
+    Ok(Json(json))
 }

@@ -30,9 +30,11 @@ pub async fn user_by_username(db: DbType<'_>, username: &str) -> Result<user::Mo
 }
 
 #[must_use]
-pub async fn questions_w_answers_by_asked_id(db: DbType<'_>, asked_id: i32) -> Result<Vec<QuestionDTO>, TellonymError> {
+pub async fn questions_w_answers_by_asked_id(db: DbType<'_>, asked_ids: &[i32]) -> Result<Vec<QuestionDTO>, TellonymError> {
     let questions: Vec<(question::Model, Vec<answer::Model>)> = Question::find()
-        .filter(question::Column::AskedId.eq(asked_id))
+        .filter(
+            Expr::tbl(question::Column::AskedId.entity_name(), question::Column::AskedId).is_in(asked_ids.to_vec())
+        )
         .find_with_related(Answer)
         .all(db)
         .await

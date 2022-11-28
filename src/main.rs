@@ -52,6 +52,7 @@ fn rocket() -> _ {
             routes::user_followers,
             routes::user_follows,
             routes::edit_profile,
+            routes::get_homepage,
 
             routes::answer_question, 
             routes::get_question,
