@@ -27,7 +27,7 @@ pub async fn answer_question(
 
     //TODO: Add editing of questions
 
-    if question.asked_id != user.id { return Err(TellonymError::ConstraintError) }
+    if question.asked_id != user.id { return Err(TellonymError::ConstraintError(String::from("You can not answer questions not intended for you"))) }
     
     let now = chrono::offset::Utc::now().naive_utc();
 

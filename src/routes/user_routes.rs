@@ -94,7 +94,7 @@ pub async fn ask_question(
     //this is here to check whether the user (id: asked_id) actually exists
     let user_being_asked: user::Model = query::user_by_id(db, asked_id).await?;
 
-    if user_being_asked.id == user_asking_question.id { return Err(TellonymError::ConstraintError) }
+    if user_being_asked.id == user_asking_question.id { return Err(TellonymError::ConstraintError(String::from("You can not ask yourself a question"))) }
 
     let question = question::ActiveModel {
         content: Set(content.to_string()),
@@ -170,7 +170,7 @@ pub async fn follow_user(
     let wants_to_follow = query::user_by_id(db, user_id).await?;
     let to_be_followed = query::user_by_id(db, to_follow_id).await?;
 
-    if wants_to_follow.id == to_be_followed.id { return Err(TellonymError::ConstraintError) };
+    if wants_to_follow.id == to_be_followed.id { return Err(TellonymError::ConstraintError(String::from("You can not follow yourself"))) };
 
     let follow: Option<follow::Model> = query::exact_follow(db, wants_to_follow.id, to_follow_id).await?;
     
@@ -226,16 +226,19 @@ pub async fn edit_profile(
     
     // figure out new values
     let new_username = new_username.unwrap_or(&user.username).to_string();
-
+    if new_username.trim().len() == 0 { return Err(TellonymError::ConstraintError(String::from("New username can not be empty"))) }
+    
     let new_password = match (new_password, current_password) {
         // if current_pass and new_pass were passed
         (Some(new_pass), Some(current_pass)) => {
+            if new_pass.trim().len() == 0 { return Err(TellonymError::ConstraintError(String::from("New password can not be empty"))) }
+            
             let current_pass_matches_old = verify(current_pass, &user.password)
-                .map_err(|_| TellonymError::ConstraintError)?;
+            .map_err(|_| TellonymError::ConstraintError(String::from("Current password has to match the old password")))?;
                 
             if current_pass_matches_old {
                 hash(new_pass, bcrypt::DEFAULT_COST)
-                    .map_err(|_| TellonymError::ServerError)?
+                .map_err(|_| TellonymError::ServerError)?
             } else {
                 user.password.clone()
             }
@@ -244,7 +247,7 @@ pub async fn edit_profile(
     };
 
     let new_bio = new_bio.unwrap_or(&user.bio).to_string();
-    
+
     //set new data & save
     let mut active_user: user::ActiveModel = user.into();
     
@@ -256,6 +259,7 @@ pub async fn edit_profile(
 
     //Save pfp if it was passed
     if let Some(mut new_pfp) = new_profile_pic {
+        if new_pfp.len() == 0 { return Err(TellonymError::ConstraintError(String::from("Profile picture cant be 0 bytes"))) }
         let path = relative!("pfps").to_string() + &format!("\\{}.png", user_id);
 
         new_pfp.persist_to(path)
