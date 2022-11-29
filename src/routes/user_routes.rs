@@ -199,11 +199,11 @@ pub async fn follow_user(
 
 #[derive(FromForm)]
 pub struct EditProfileData<'a> {
-    username: Option<&'a str>,
-    current_password: Option<&'a str>,
-    password: Option<&'a str>,
-    bio: Option<&'a str>,
-    profile_pic: Option<TempFile<'a>>
+    username: &'a str,
+    current_password: &'a str,
+    password: &'a str,
+    bio: &'a str,
+    profile_pic: TempFile<'a>
 }
 
 #[post("/editprofile", data = "<edit_profile_data>")]
@@ -219,50 +219,43 @@ pub async fn edit_profile(
         current_password,
         password: new_password, 
         bio: new_bio,
-        profile_pic: new_profile_pic,
+        profile_pic: mut new_profile_pic,
     } = edit_profile_data.into_inner();
  
     let user = query::user_by_id(db, user_id).await?;
     
     // figure out new values
-    let new_username = new_username.unwrap_or(&user.username).to_string();
-    if new_username.trim().len() == 0 { return Err(TellonymError::ConstraintError(String::from("New username can not be empty"))) }
-    
-    let new_password = match (new_password, current_password) {
-        // if current_pass and new_pass were passed
-        (Some(new_pass), Some(current_pass)) => {
-            if new_pass.trim().len() == 0 { return Err(TellonymError::ConstraintError(String::from("New password can not be empty"))) }
-            
-            let current_pass_matches_old = verify(current_pass, &user.password)
-            .map_err(|_| TellonymError::ConstraintError(String::from("Current password has to match the old password")))?;
-                
-            if current_pass_matches_old {
-                hash(new_pass, bcrypt::DEFAULT_COST)
-                .map_err(|_| TellonymError::ServerError)?
-            } else {
-                user.password.clone()
-            }
-        }
-        _ => user.password.clone()
+
+    let new_username = if new_username.trim().len() == 0 { user.username.clone() } else { new_username.to_string() };
+    let new_password = if new_password.trim().len() == 0 { 
+        user.password.clone()
+    } else {
+        let current_pass_matches_old = verify(current_password, &user.password)
+            .map_err(|_| TellonymError::ServerError)?;
+
+        match current_pass_matches_old {
+            true => hash(new_password, bcrypt::DEFAULT_COST)
+                .map_err(|_| TellonymError::ServerError)?,
+            false => return Err(TellonymError::ConstraintError(String::from("Current password must match the current password")))
+        } 
     };
 
-    let new_bio = new_bio.unwrap_or(&user.bio).to_string();
+    let new_bio = if new_bio.trim().len() == 0 { user.bio.clone() } else { new_bio.to_string() };
 
     //set new data & save
     let mut active_user: user::ActiveModel = user.into();
     
-    active_user.username = Set(new_username);
-    active_user.password = Set(new_password);
-    active_user.bio = Set(new_bio);
+    active_user.username = Set(new_username.trim().to_string());
+    active_user.password = Set(new_password.trim().to_string());
+    active_user.bio = Set(new_bio.trim().to_string());
     
     mutation::update_user(db, active_user).await?;
 
     //Save pfp if it was passed
-    if let Some(mut new_pfp) = new_profile_pic {
-        if new_pfp.len() == 0 { return Err(TellonymError::ConstraintError(String::from("Profile picture cant be 0 bytes"))) }
+    if new_profile_pic.len() > 0 {
         let path = relative!("pfps").to_string() + &format!("\\{}.png", user_id);
-
-        new_pfp.persist_to(path)
+    
+        new_profile_pic.persist_to(path)
             .await
             .map_err(|_| {
                 return TellonymError::ServerError;
