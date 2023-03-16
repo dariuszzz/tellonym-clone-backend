@@ -1,7 +1,7 @@
 use sea_orm::entity::prelude::*;
 use serde::{Serialize, Deserialize};
 
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, PartialEq, DeriveEntityModel, Eq, Serialize, Deserialize)]
 #[sea_orm(table_name = "users")]
 pub struct Model {
     #[serde(skip_deserializing)]
