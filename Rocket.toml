@@ -6,4 +6,4 @@ address = "127.0.0.1"
 ctrlc = true
 
 [default.databases.sea_orm]
-url = "mysql://root:@localhost/tellonym_clone"
+url = "mysql://uzytnik:haselko@localhost/tellonym_clone"
