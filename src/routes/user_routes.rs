@@ -253,7 +253,7 @@ pub async fn edit_profile(
 
     //Save pfp if it was passed
     if new_profile_pic.len() > 0 {
-        let path = relative!("pfps").to_string() + &format!("\\{}.png", user_id);
+        let path = relative!("pfps").to_string() + &format!("/{}.png", user_id);
     
         new_profile_pic.persist_to(path)
             .await
