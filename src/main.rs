@@ -42,6 +42,7 @@ fn rocket() -> _ {
             routes::register, 
             routes::login, 
             routes::refresh,
+            routes::logout,
 
             routes::get_user, 
             routes::user_questions,

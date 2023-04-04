@@ -89,3 +89,14 @@ pub async fn login(
 
     Ok(access_jwt)
 }
+
+#[post("/logout")]
+pub async fn logout(
+    cookies: &CookieJar<'_>,
+) -> Result<(), TellonymError> {
+    cookies.remove(
+        Cookie::named("refresh_token")
+    );
+
+    Ok(())
+}
