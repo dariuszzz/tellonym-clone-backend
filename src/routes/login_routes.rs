@@ -32,6 +32,10 @@ pub async fn register(
     register_data: Json<LoginData<'_>>
 ) -> Result<status::Created<String>, TellonymError> {
     let LoginData { username, password } = register_data.into_inner();
+
+    if username.len() < 3 { return Err(TellonymError::ConstraintError("Username must be at least 3 characters long".to_owned())) }
+    if password.len() < 8 { return Err(TellonymError::ConstraintError("Password must be at least 3 characters long".to_owned())) }
+
     let db = conn.into_inner();
     
     let hashed_pass = hash(password, bcrypt::DEFAULT_COST)

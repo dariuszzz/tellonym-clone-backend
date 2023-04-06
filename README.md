@@ -70,6 +70,8 @@ if required the access token needs to be in a Authorization header prefixed with
 - POST `/register` <br>
   => `json { username: string, password: string }` <br>
   <= access token (plaintext), refresh token in cookie
+  username has to be at least 3 characters long <br>
+  password has to be at least 8 characters long
 
 - POST `/login` <br>
   => `json { username: string, password: string }` <br>
