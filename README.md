@@ -139,3 +139,6 @@ if required the access token needs to be in a Authorization header prefixed with
   <= `json [ { question, answer }, { question, answer } ]`
   returns questions answered by people followed by the current user <br>
   requires access token
+  
+ - POST `/logout` <br>
+  removes the refresh token, access token is still valid though so it needs to be discarded on the client side
