@@ -32,6 +32,17 @@ async fn get_pfp(name: &str) -> NamedFile {
     }
 }
 
+#[get("/bgs/<name>")]
+async fn get_bg(name: &str) -> NamedFile {
+    let path = Path::new(relative!("bgs")).join(name);
+    let default_path = Path::new(relative!("bgs")).join("0.jpg");
+
+    match NamedFile::open(path).await {
+        Ok(file) => file,
+        Err(_) => NamedFile::open(default_path).await.unwrap()
+    }
+}
+
 #[launch]
 fn rocket() -> _ {
     rocket::build()
@@ -61,6 +72,7 @@ fn rocket() -> _ {
             routes::vote_question,
 
             get_pfp,
+            get_bg,
         ])
 }
 

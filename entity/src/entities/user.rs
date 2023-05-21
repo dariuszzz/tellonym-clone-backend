@@ -15,6 +15,10 @@ pub struct Model {
     pub follower_count: u32,
     pub following_count: u32,
     pub bio: String,
+    pub twitch: String,
+    pub twitter: String,
+    pub youtube: String,
+    pub instagram: String,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
