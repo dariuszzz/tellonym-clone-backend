@@ -47,7 +47,7 @@ pub async fn register(
         ..Default::default()
     };
     
-    let user =mutation::register_user(db, user).await?;
+    let user = mutation::register_user(db, user).await?;
     
     let access_jwt = JWTUtil::sign_access_jwt(user.id);
     let refresh_jwt = JWTUtil::sign_refresh_jwt(user.id);

@@ -2,7 +2,7 @@
 /Cargo.lock
 .env
 todo
-!/pfps/0.png
 /pfps/**
-!/bgs/0.png
+!/pfps/0.jpg
 /bgs/**
+!/bgs/0.jpg
