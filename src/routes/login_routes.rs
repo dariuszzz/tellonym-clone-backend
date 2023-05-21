@@ -34,7 +34,7 @@ pub async fn register(
     let LoginData { username, password } = register_data.into_inner();
 
     if username.len() < 3 { return Err(TellonymError::ConstraintError("Username must be at least 3 characters long".to_owned())) }
-    if password.len() < 8 { return Err(TellonymError::ConstraintError("Password must be at least 3 characters long".to_owned())) }
+    if password.len() < 8 { return Err(TellonymError::ConstraintError("Password must be at least 8 characters long".to_owned())) }
 
     let db = conn.into_inner();
     
