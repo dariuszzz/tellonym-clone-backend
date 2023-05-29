@@ -172,9 +172,9 @@ pub async fn vote_answer(
             mutation::delete_like(db, like).await?;
 
             if is_like {
-                change_answer_vote(db, answer, -1).await?;
+                mutation::change_answer_vote(db, answer, -1).await?;
             } else {
-                change_answer_vote(db, answer, 1).await?;
+                mutation::change_answer_vote(db, answer, 1).await?;
             }
             // -1 do question if is_like
             // +1 do question if not is_like
@@ -193,9 +193,9 @@ pub async fn vote_answer(
                 // -2 do question if not is_like
                 
                 if is_like {
-                    change_answer_vote(db, answer, 2).await?;
+                    mutation::change_answer_vote(db, answer, 2).await?;
                 } else {
-                    change_answer_vote(db, answer, -2).await?;
+                    mutation::change_answer_vote(db, answer, -2).await?;
                 }
 
             } else {
@@ -211,9 +211,9 @@ pub async fn vote_answer(
                 // +1 do question if is_like
                 // -1 do question if not is_like
                 if is_like {
-                    change_answer_vote(db, answer, 1).await?;
+                    mutation::change_answer_vote(db, answer, 1).await?;
                 } else {
-                    change_answer_vote(db, answer, -1).await?;
+                    mutation::change_answer_vote(db, answer, -1).await?;
                 }
             }
         }

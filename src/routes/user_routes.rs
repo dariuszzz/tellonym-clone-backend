@@ -203,7 +203,12 @@ pub struct EditProfileData<'a> {
     current_password: &'a str,
     password: &'a str,
     bio: &'a str,
-    profile_pic: TempFile<'a>
+    twitch: &'a str,
+    twitter: &'a str,
+    youtube: &'a str,
+    instagram: &'a str,
+    profile_pic: TempFile<'a>,
+    bg: TempFile<'a>
 }
 
 #[post("/editprofile", data = "<edit_profile_data>")]
@@ -219,7 +224,12 @@ pub async fn edit_profile(
         current_password,
         password: new_password, 
         bio: new_bio,
+        twitch: new_twitch,
+        twitter: new_twitter,
+        youtube: new_youtube,
+        instagram: new_instagram,
         profile_pic: mut new_profile_pic,
+        bg: mut new_bg,
     } = edit_profile_data.into_inner();
  
     let user = query::user_by_id(db, user_id).await?;
@@ -241,6 +251,11 @@ pub async fn edit_profile(
     };
 
     let new_bio = if new_bio.trim().len() == 0 { user.bio.clone() } else { new_bio.to_string() };
+    
+    let new_twitch = if new_twitch.trim().len() == 0 { user.twitch.clone() } else { new_twitch.to_string() };
+    let new_twitter = if new_twitter.trim().len() == 0 { user.twitter.clone() } else { new_twitter.to_string() };
+    let new_youtube = if new_youtube.trim().len() == 0 { user.youtube.clone() } else { new_youtube.to_string() };
+    let new_instagram = if new_instagram.trim().len() == 0 { user.instagram.clone() } else { new_instagram.to_string() };
 
     //set new data & save
     let mut active_user: user::ActiveModel = user.into();
@@ -248,6 +263,10 @@ pub async fn edit_profile(
     active_user.username = Set(new_username.trim().to_string());
     active_user.password = Set(new_password.trim().to_string());
     active_user.bio = Set(new_bio.trim().to_string());
+    active_user.twitch = Set(new_twitch.trim().to_string());
+    active_user.twitter = Set(new_twitter.trim().to_string());
+    active_user.youtube = Set(new_youtube.trim().to_string());
+    active_user.instagram = Set(new_instagram.trim().to_string());
     
     mutation::update_user(db, active_user).await?;
 
@@ -262,6 +281,16 @@ pub async fn edit_profile(
             })?;
     }
     
+    if new_bg.len() > 0 {
+        let path = relative!("bgs").to_string() + &format!("/{}.png", user_id);
+    
+        new_bg.persist_to(path)
+            .await
+            .map_err(|_| {
+                return TellonymError::ServerError;
+            })?;
+    }
+
     Ok(Status::Created)
 }
 
