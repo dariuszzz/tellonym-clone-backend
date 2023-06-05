@@ -126,7 +126,7 @@ if required the access token needs to be in a Authorization header prefixed with
   requires access token
 
 - POST `/editprofile` <br>
-  <= `multipart { username?: string, current_pass?: string, password?: string, bio?: string, profile_pic?: file` <br>
+  <= `multipart { username?: string, current_pass?: string, password?: string, bio?: string, twitch?: string, twitter?: string, youtube?: string, instagram?: string, profile_pic?: file, bg?: file` <br>
   requires access token <br>
   sets whatever you pass (you stay logged in even if changing pass) <br>
   if password is set then current_password has to be set as well (and equal to previous password)
