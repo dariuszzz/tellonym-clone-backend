@@ -130,7 +130,7 @@ pub async fn vote_question(
                     ..Default::default()
                 };
 
-                mutation::update_like(db, new_like).await?;
+                mutation::insert_like(db, new_like).await?;
 
                 // +1 do question if is_like
                 // -1 do question if not is_like
@@ -206,7 +206,7 @@ pub async fn vote_answer(
                     ..Default::default()
                 };
 
-                mutation::update_like(db, new_like).await?;
+                mutation::insert_like(db, new_like).await?;
 
                 // +1 do question if is_like
                 // -1 do question if not is_like

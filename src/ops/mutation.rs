@@ -81,6 +81,12 @@ pub async fn delete_like(db: DbType<'_>, like: like::Model) -> Result<DeleteResu
     Ok(res)
 }
 
+pub async fn insert_like(db: DbType<'_>, like: like::ActiveModel) -> Result<like::Model, TellonymError> {
+    like.insert(db)
+        .await
+        .map_err(|e| TellonymError::DatabaseError(e.to_string()))
+}
+
 pub async fn update_like(db: DbType<'_>, like: like::ActiveModel) -> Result<like::ActiveModel, TellonymError> {
     like.save(db)
         .await
