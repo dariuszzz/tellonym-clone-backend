@@ -250,12 +250,12 @@ pub async fn edit_profile(
         } 
     };
 
-    let new_bio = if new_bio.trim().len() == 0 { user.bio.clone() } else { new_bio.to_string() };
+    let new_bio = new_bio.to_string();
     
-    let new_twitch = if new_twitch.trim().len() == 0 { user.twitch.clone() } else { new_twitch.to_string() };
-    let new_twitter = if new_twitter.trim().len() == 0 { user.twitter.clone() } else { new_twitter.to_string() };
-    let new_youtube = if new_youtube.trim().len() == 0 { user.youtube.clone() } else { new_youtube.to_string() };
-    let new_instagram = if new_instagram.trim().len() == 0 { user.instagram.clone() } else { new_instagram.to_string() };
+    let new_twitch = new_twitch.to_string();
+    let new_twitter = new_twitter.to_string();
+    let new_youtube = new_youtube.to_string();
+    let new_instagram = new_instagram.to_string();
 
     //set new data & save
     let mut active_user: user::ActiveModel = user.into();
